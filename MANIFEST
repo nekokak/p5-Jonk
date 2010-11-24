@@ -21,8 +21,6 @@ t/00_compile.t
 t/basic.t
 t/start_mysqld.pl
 t/Utils.pm
-todo
-xt/01_podspell.t
-xt/02_perlcritic.t
-xt/03_pod.t
+xt/02_pod.t
+xt/perlcritic.t
 xt/perlcriticrc

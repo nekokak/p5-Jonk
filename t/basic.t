@@ -32,6 +32,13 @@ subtest 'dequeue' => sub {
     done_testing;
 };
 
+subtest 'dequeue / no job' => sub {
+    my $jonk = Jonk->new($dbh, {funcs => [qw/MyWorker/]});
+    my $job = $jonk->dequeue();
+    ok not $job;
+    done_testing;
+};
+
 t::Utils->cleanup($mysqld);
 
 done_testing;

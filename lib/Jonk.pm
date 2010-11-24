@@ -52,16 +52,18 @@ sub dequeue {
             my $sth = $self->{dbh}->prepare_cached($sql);
             $sth->execute(@{$self->{funcs}});
             my $row = $sth->fetchrow_hashref;
+            $sth->finish;
 
-            $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
-            $sth->execute($row->{id});
+            if ($row) {
+
+                $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
+                $sth->execute($row->{id});
+                $sth->finish;
+            }
 
         $self->{dbh}->commit;
 
-        return +{
-            func => $row->{func},
-            arg  => $row->{arg},
-        };
+        return $row;
 
     } catch {
         Carp::carp("can't get job from job queue database: $_");
