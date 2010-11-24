@@ -111,7 +111,7 @@ Jonk - simple job tank manager.
 
 =head1 DESCRIPTION
 
-Jonk is simple job queue manager.
+Jonk is simple job tanking system.
 
 Job is saved and taken out. Besides, nothing is done.
 
