@@ -1,0 +1,11 @@
+=head1 NAME
+
+Jonk::Cookbook - recipes
+
+=head1 RECIPES
+
+L<Jonk::Cookbook::Basic> - basic usage.
+
+L<Jonk::Cookbook::ForkModel> - with Parallel::Prefork.
+
+=cut
