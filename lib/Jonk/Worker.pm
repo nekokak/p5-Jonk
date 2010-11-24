@@ -1,7 +1,7 @@
 package Jonk::Worker;
 use strict;
 use warnings;
-use Carp;
+use Carp ();
 use Try::Tiny;
 
 sub new {
@@ -57,9 +57,9 @@ __END__
 
 =head1 NAME
 
-Jonk::Worker -
+Jonk::Worker - get a job data class.
 
-=head2 my $jonk = Jonk->new($dbh, $options);
+=head2 my $jonk = Jonk::Worker->new($dbh, $options);
 
 Creates a new Jonk object, and returns the object.
 

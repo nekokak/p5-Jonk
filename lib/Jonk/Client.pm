@@ -1,7 +1,7 @@
 package Jonk::Client;
 use strict;
 use warnings;
-use Carp;
+use Carp ();
 use Try::Tiny;
 
 sub new {
@@ -55,9 +55,9 @@ __END__
 
 =head1 NAME
 
-Jonk::Client - 
+Jonk::Client - job enqueue client class.
 
-=head2 my $jonk = Jonk->new($dbh, $options);
+=head2 my $jonk = Jonk::Client->new($dbh, $options);
 
 Creates a new Jonk object, and returns the object.
 
