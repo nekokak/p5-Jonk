@@ -35,8 +35,9 @@ worker script:
         if (my $job = $jonk->dequeue) {
             my $worker = $job->{func}; # Your::Worker;
             $worker->work($job);
+        } else {
+            sleep(3); # wait for 3 sec.
         }
-        sleep(3); # wait for 3 sec.
     }
     
 =cut
