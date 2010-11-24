@@ -117,6 +117,57 @@ Jonk is simple job queue manager.
 
 Job is saved and taken out. Besides, nothing is done.
 
+You may use Jonk to make original Job Queuing System.
+
+Jonk is a META Job Queuing System.
+
+=head1 METHODS
+
+=head2 my $jonk = Jonk->new($dbh, $options);
+
+Creates a new Jonk object, and returns the object.
+
+=over 4
+
+=item * $dbh
+
+$dbh is database handle.
+
+=item * $options->{funcs}
+
+Key word of job which this Jonk instance looks for.
+
+=back
+
+=head2 my $job_id = $jonk->enqueue($func, $arg);
+
+enqueue a job to a database.
+returns job.id.
+
+=orver 4
+
+=item * $func
+
+=item * $arg
+
+job argument data.
+serialize is not done in Jonk. 
+Please pass data that does serialize if it is necessary. 
+
+=back
+
+=head2 my $job_hash_ref = $jonk->dequeue;
+
+dequeue a job from a database.
+
+returns job hashref data.
+
+Please do deserialize if it is necessary. 
+
+=head2 $jonk->add_funcs($func);
+
+The key word to do dequeue is set. 
+
 =head1 AUTHOR
 
 Atsushi Kobayashi E<lt>nekokak _at_ gmail _dot_ comE<gt>
@@ -129,3 +180,4 @@ This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =cut
+
