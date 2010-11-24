@@ -26,12 +26,11 @@ prefork worker script:
         $pm->start and next;
 
         my $dbh = DBI->connect('dbi:mysql:test','user','pass');
-        my $jonk = Jonk::Worker->new($dbh => {functions => [qw/Your::Worker/]});
+        my $jonk = Jonk::Worker->new($dbh => {functions => [qw/worker_key/]});
 
         while (1) {
             if (my $job = $jonk->dequeue) {
-                my $worker = $job->{func}; # Your::Worker;
-                $worker->work($job);
+                Your::Worker->work($job);
             } else {
                 sleep(3); # wait for 3 sec.
             }
