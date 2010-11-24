@@ -1,89 +1,8 @@
 package Jonk;
 use strict;
 use warnings;
-use Carp;
-use Try::Tiny;
 
 our $VERSION = '0.01';
-
-sub new {
-    my ($class, $dbh, $opts) = @_;
-
-    unless ($dbh) {
-        Carp::croak('missing job queue database handle.');
-    }
-
-    bless {
-        dbh   => $dbh,
-        funcs => ($opts->{funcs}||[]),
-    }, $class;
-}
-
-sub enqueue {
-    my ($self, $func, $arg) = @_;
-
-    my $job_id = try {
-        my $sth = $self->{dbh}->prepare_cached('INSERT INTO job (func, arg, enqueue_time) VALUES (?,?,?)');
-
-        my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
-        my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
-        $sth->execute($func, $arg, $time);
-        $self->_insert_id($self->{dbh}, $sth);
-    } catch {
-        Carp::carp("can't enqueue for job queue database: $_");
-    };
-
-    $job_id;
-}
-
-sub add_funcs {
-    my ($self, $func) = @_;
-    push @{$self->{funcs}}, $func;
-}
-
-sub dequeue {
-    my $self = shift;
-
-    my $sql = sprintf 'SELECT * FROM job WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE', join( ", ", ("?") x @{$self->{funcs}} );
-
-    my $job = try {
-        $self->{dbh}->begin_work;
-
-            my $sth = $self->{dbh}->prepare_cached($sql);
-            $sth->execute(@{$self->{funcs}});
-            my $row = $sth->fetchrow_hashref;
-            $sth->finish;
-
-            if ($row) {
-
-                $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
-                $sth->execute($row->{id});
-                $sth->finish;
-            }
-
-        $self->{dbh}->commit;
-
-        return $row;
-
-    } catch {
-        Carp::carp("can't get job from job queue database: $_");
-    };
-
-    $job;
-}
-
-sub _insert_id {
-    my ($self, $dbh, $sth) = @_;
-
-    my $driver = $dbh->{Driver}{Name};
-    if ( $driver eq 'mysql' ) {
-        return $dbh->{mysql_insertid};
-    } elsif ( $driver eq 'Pg' ) {
-        return $dbh->last_insert_id( undef, undef, undef, undef,{ sequence => join( '_', 'job', 'id', 'seq' ) } );
-    } else {
-        Carp::croak "Don't know how to get last insert id for $driver";
-    }
-}
 
 1;
 __END__
@@ -94,18 +13,19 @@ Jonk - simple job tank manager.
 
 =head1 SYNOPSIS
 
-    use Jonk;
-    
+    use DBI; 
     my $dbh = DBI->connect(...);
     # enqueue job
     {
-        my $jonk = Jonk->new($dbh);
+        use Jonk::Client;
+        my $jonk = Jonk::Client->new($dbh);
         $jonk->enqueue('MyWorker', 'arg');
     }
 
     # dequeue job
     {
-        my $jonk = Jonk->new($dbh, {funcs => ['MyWorker']});
+        use Jonk::Worker;
+        my $jonk = Jonk::Worker->new($dbh, {functions => ['MyWorker']});
         my $job = $jonk->dequeue;
         print $job->{func}; # MyWorker
         print $job->{arg};  # arg
@@ -121,52 +41,13 @@ You may use Jonk to make original Job Queuing System.
 
 Jonk is a META Job Queuing System.
 
-=head1 METHODS
+=head1 L<Jonk::Client>
 
-=head2 my $jonk = Jonk->new($dbh, $options);
+enqueue client class.
 
-Creates a new Jonk object, and returns the object.
+=head1 L<Jonk::Worker>
 
-=over 4
-
-=item * $dbh
-
-$dbh is database handle.
-
-=item * $options->{funcs}
-
-Key word of job which this Jonk instance looks for.
-
-=back
-
-=head2 my $job_id = $jonk->enqueue($func, $arg);
-
-enqueue a job to a database.
-returns job.id.
-
-=over 4
-
-=item * $func
-
-=item * $arg
-
-job argument data.
-serialize is not done in Jonk. 
-Please pass data that does serialize if it is necessary. 
-
-=back
-
-=head2 my $job_hash_ref = $jonk->dequeue;
-
-dequeue a job from a database.
-
-returns job hashref data.
-
-Please do deserialize if it is necessary. 
-
-=head2 $jonk->add_funcs($func);
-
-The key word to do dequeue is set. 
+dequeue client class.
 
 =head1 AUTHOR
 

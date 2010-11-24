@@ -6,7 +6,8 @@ use Jonk;
 use DBI;
 use Parallel::ForkManager;
 
-my $db = DBI->connect('dbi:mysql:test','root','');
+my $db = DBI->connect('dbi:mysql:jonk','root','');
+=pod
 $db->do(q{DROP TABLE job});
 $db->do(q{
     CREATE TABLE job (
@@ -17,14 +18,15 @@ $db->do(q{
         primary key ( id )
     )
 });
+=cut
 my $pm = Parallel::ForkManager->new(50);
 
-timethese(5, {
+timethese(9, {
     'enqueue' => sub {
-        for my $i (1 .. 1000) {
+        for my $i (1 .. 10000) {
             my $pid = $pm->start and next;
 
-                my $dbh = DBI->connect('dbi:mysql:test','root','');
+                my $dbh = DBI->connect('dbi:mysql:jonk','root','');
                 my $jonk = Jonk->new($dbh);
                 my $job_id = $jonk->enqueue('MyWorker','args_'.$i);
 
@@ -33,6 +35,8 @@ timethese(5, {
         $pm->wait_all_children;
     },
 });
+
+__END__
 
 timethese(5, {
     'dequeue' => sub {

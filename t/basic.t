@@ -3,13 +3,14 @@ use warnings;
 use t::Utils;
 use Test::More;
 use DBI;
-use Jonk;
+use Jonk::Client;
+use Jonk::Worker;
 
 my $mysqld = t::Utils->setup;
 my $dbh = DBI->connect($mysqld->dsn(dbname => 'test'));
 
 subtest 'enqueue' => sub {
-    my $jonk = Jonk->new($dbh);
+    my $jonk = Jonk::Client->new($dbh);
     my $job_id = $jonk->enqueue('MyWorker', 'arg');
     ok $job_id;
 
@@ -24,7 +25,7 @@ subtest 'enqueue' => sub {
 };
 
 subtest 'dequeue' => sub {
-    my $jonk = Jonk->new($dbh, {funcs => [qw/MyWorker/]});
+    my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});
     my $job = $jonk->dequeue();
     is $job->{arg}, 'arg';
     is $job->{func}, 'MyWorker';
@@ -33,7 +34,7 @@ subtest 'dequeue' => sub {
 };
 
 subtest 'dequeue / no job' => sub {
-    my $jonk = Jonk->new($dbh, {funcs => [qw/MyWorker/]});
+    my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});
     my $job = $jonk->dequeue();
     ok not $job;
     done_testing;
