@@ -39,8 +39,6 @@ Job is saved and taken out. Besides, nothing is done.
 
 You may use Jonk to make original Job Queuing System.
 
-Jonk is a META Job Queuing System.
-
 =head1 L<Jonk::Client>
 
 enqueue client class.
