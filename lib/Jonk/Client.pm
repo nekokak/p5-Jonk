@@ -26,7 +26,7 @@ sub enqueue {
         local $self->{dbh}->{PrintError} = 0;
         my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
         $sth->execute($func, $arguments->{arg}, $arguments->{time});
-        $job_id = $self->_insert_id($self->{dbh}, $sth);
+        $job_id = $self->_insert_id($self->{dbh});
         $sth->finish;
     } catch {
         Carp::carp("can't enqueue for job queue database: $_");
@@ -36,7 +36,7 @@ sub enqueue {
 }
 
 sub _insert_id {
-    my ($self, $dbh, $sth) = @_;
+    my ($self, $dbh) = @_;
 
     my $driver = $dbh->{Driver}{Name};
     if ( $driver eq 'mysql' ) {
