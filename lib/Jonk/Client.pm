@@ -17,14 +17,11 @@ sub new {
 }
 
 sub enqueue {
-    my ($self, $func, $arg) = @_;
+    my ($self, $func, $arguments) = @_;
 
     my $job_id = try {
         my $sth = $self->{dbh}->prepare_cached('INSERT INTO job (func, arg, enqueue_time) VALUES (?,?,?)');
-
-        my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
-        my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
-        $sth->execute($func, $arg, $time);
+        $sth->execute($func, $arguments->{arg}, $arguments->{time});
         $self->_insert_id($self->{dbh}, $sth);
     } catch {
         Carp::carp("can't enqueue for job queue database: $_");
@@ -65,7 +62,7 @@ $dbh is database handle.
 
 =back
 
-=head2 my $job_id = $jonk->enqueue($func, $arg);
+=head2 my $job_id = $jonk->enqueue($func, $arguments);
 
 enqueue a job to a database.
 returns job.id.
@@ -74,11 +71,16 @@ returns job.id.
 
 =item * $func
 
-=item * $arg
+=item * $arguments->{arg}
 
 job argument data.
 serialize is not done in Jonk. 
 Please pass data that does serialize if it is necessary. 
+
+=item * $arguments->{time}
+
+job enqueue time.
+format: YYYY-MM-DD HH:MM::SS
 
 =back
 

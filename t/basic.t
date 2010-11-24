@@ -11,7 +11,11 @@ my $dbh = DBI->connect($mysqld->dsn(dbname => 'test'));
 
 subtest 'enqueue' => sub {
     my $jonk = Jonk::Client->new($dbh);
-    my $job_id = $jonk->enqueue('MyWorker', 'arg');
+
+    my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
+    my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+
+    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg', time => $time });
     ok $job_id;
 
     my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
@@ -20,6 +24,7 @@ subtest 'enqueue' => sub {
 
     is $row->{arg}, 'arg';
     is $row->{func}, 'MyWorker';
+    is $row->{enqueue_time}, $time;
 
     done_testing;
 };
