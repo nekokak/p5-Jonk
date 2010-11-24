@@ -44,24 +44,25 @@ sub add_funcs {
 sub dequeue {
     my $self = shift;
 
-    my $sql = sprintf 'SELECT * FROM job WHERE func IN (%s) ORDER BY id LIMIT 1', join( ", ", ("?") x @{$self->{funcs}} );
+    my $sql = sprintf 'SELECT * FROM job WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE', join( ", ", ("?") x @{$self->{funcs}} );
 
     my $job = try {
-        my $sth = $self->{dbh}->prepare_cached($sql);
-        $sth->execute(@{$self->{funcs}});
-        my $row = $sth->fetchrow_hashref;
+        $self->{dbh}->begin_work;
 
-        if ($row) {
-            my $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
+            my $sth = $self->{dbh}->prepare_cached($sql);
+            $sth->execute(@{$self->{funcs}});
+            my $row = $sth->fetchrow_hashref;
+
+            $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
             $sth->execute($row->{id});
-            if ($sth->rows) {
-                return +{
-                    func => $row->{func},
-                    arg  => $row->{arg},
-                };
-            }
-        }
-        return;
+
+        $self->{dbh}->commit;
+
+        return +{
+            func => $row->{func},
+            arg  => $row->{arg},
+        };
+
     } catch {
         Carp::carp("can't get job from job queue database: $_");
     };
@@ -73,7 +74,6 @@ sub _insert_id {
     my ($self, $dbh, $sth) = @_;
 
     my $driver = $dbh->{Driver}{Name};
-    warn $driver;
     if ( $driver eq 'mysql' ) {
         return $dbh->{mysql_insertid};
     } elsif ( $driver eq 'Pg' ) {
