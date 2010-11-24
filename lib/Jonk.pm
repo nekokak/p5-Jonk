@@ -68,6 +68,20 @@ dequeue client class.
         enqueue_time text
     )
 
+=head1 SUPPORT
+
+  irc: #jonk@irc.perl.org
+
+=head1 REPOSITORY
+
+  git clone git://github.com/nekokak/p5-Jonk.git
+
+=head1 CONTRIBUTORS
+
+tokuhirom
+
+kan_fushihara
+
 =head1 AUTHOR
 
 Atsushi Kobayashi E<lt>nekokak _at_ gmail _dot_ comE<gt>
