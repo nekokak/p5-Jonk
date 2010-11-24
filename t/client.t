@@ -33,9 +33,9 @@ subtest 'enqueue' => sub {
     done_testing;
 };
 
-subtest 'enqueue / and callback' => sub {
+subtest 'enqueue / and enqueue_time_callback' => sub {
     my $time;
-    my $jonk = Jonk::Client->new($dbh,+{callback => sub {
+    my $jonk = Jonk::Client->new($dbh,+{enqueue_time_callback => sub {
         my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
         $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
     }});

@@ -14,7 +14,7 @@ sub new {
     bless {
         dbh           => $dbh,
         enqueue_query => sprintf('INSERT INTO %s (func, arg, enqueue_time) VALUES (?,?,?)', ($opts->{table_name}||'job')),
-        callback      => ($opts->{callback}||sub{
+        enqueue_time_callback => ($opts->{enqueue_time_callback}||sub{
             my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
@@ -29,7 +29,7 @@ sub enqueue {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
         my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
-        $sth->execute($func, $arguments->{arg}, $self->{callback}->());
+        $sth->execute($func, $arguments->{arg}, $self->{enqueue_time_callback}->());
         $job_id = $self->_insert_id($self->{dbh});
         $sth->finish;
     } catch {
@@ -77,7 +77,7 @@ specific job table name.
 
 Default job table name is `job`.
 
-=item * $options->{callback}
+=item * $options->{enqueue_time_callback}
 
 specific enqueue_time creation callback.
 
