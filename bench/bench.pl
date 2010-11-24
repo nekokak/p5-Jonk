@@ -2,7 +2,8 @@
 use strict;
 use warnings;
 use Benchmark qw/countit timethese timeit timestr/;
-use Jonk;
+use Jonk::Client;
+use Jonk::Worker;
 use DBI;
 use Parallel::ForkManager;
 
@@ -21,30 +22,33 @@ $db->do(q{
 =cut
 my $pm = Parallel::ForkManager->new(50);
 
-timethese(9, {
+=pod
+my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
+my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+
+timethese(10, {
     'enqueue' => sub {
         for my $i (1 .. 10000) {
             my $pid = $pm->start and next;
 
                 my $dbh = DBI->connect('dbi:mysql:jonk','root','');
-                my $jonk = Jonk->new($dbh);
-                my $job_id = $jonk->enqueue('MyWorker','args_'.$i);
+                my $jonk = Jonk::Client->new($dbh);
+                my $job_id = $jonk->enqueue('MyWorker3',+{arg => 'args_'.$i, time => $time});
 
             $pm->finish;
         }
         $pm->wait_all_children;
     },
 });
+=cut
 
-__END__
-
-timethese(5, {
+timethese(10, {
     'dequeue' => sub {
-        for my $i (1 .. 1000) {
+        for my $i (1 .. 10000) {
             my $pid = $pm->start and next;
 
-            my $dbh = DBI->connect('dbi:mysql:test','root','');
-            my $jonk = Jonk->new($dbh,{funcs => [qw/MyWorker/]});
+            my $dbh = DBI->connect('dbi:mysql:jonk','root','');
+            my $jonk = Jonk::Worker->new($dbh,{functions => [qw/MyWorker2/]});
             my $job = $jonk->dequeue;
 
             $pm->finish;

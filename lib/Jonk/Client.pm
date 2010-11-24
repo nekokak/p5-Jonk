@@ -43,6 +43,8 @@ sub _insert_id {
         return $dbh->{mysql_insertid};
     } elsif ( $driver eq 'Pg' ) {
         return $dbh->last_insert_id( undef, undef, undef, undef,{ sequence => join( '_', 'job', 'id', 'seq' ) } );
+    } elsif ( $driver eq 'SQLite' ) {
+        return $dbh->func('last_insert_rowid');
     } else {
         Carp::croak "Don't know how to get last insert id for $driver";
     }

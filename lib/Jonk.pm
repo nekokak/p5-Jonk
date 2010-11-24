@@ -47,6 +47,27 @@ enqueue client class.
 
 dequeue client class.
 
+=head1 SCHEMA
+
+=head2 MySQL
+
+    CREATE TABLE job (
+        id           int(10) unsigned NOT NULL auto_increment,
+        func         varchar(255)     NOT NULL,
+        arg          MEDIUMBLOB,
+        enqueue_time DATETIME         NOT NULL,
+        primary key ( id )
+    ) ENGINE=InnoDB
+
+=head2 SQLite
+
+    CREATE TABLE job (
+        id           INTEGER PRIMARY KEY ,
+        func         text,
+        arg          text,
+        enqueue_time text
+    )
+
 =head1 AUTHOR
 
 Atsushi Kobayashi E<lt>nekokak _at_ gmail _dot_ comE<gt>

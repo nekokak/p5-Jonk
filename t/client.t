@@ -5,8 +5,7 @@ use Test::More;
 use DBI;
 use Jonk::Client;
 
-my $mysqld = t::Utils->setup;
-my $dbh = DBI->connect($mysqld->dsn(dbname => 'test'));
+my $dbh = t::Utils->setup;
 
 subtest 'client / flexible job table name' => sub {
     my $jonk = Jonk::Client->new($dbh);
@@ -38,7 +37,7 @@ subtest 'enqueue' => sub {
     done_testing;
 };
 
-t::Utils->cleanup($mysqld);
+t::Utils->cleanup($dbh);
 
 done_testing;
 

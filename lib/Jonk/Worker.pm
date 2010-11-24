@@ -12,40 +12,41 @@ sub new {
     }
 
     bless {
-        dbh           => $dbh,
-        dequeue_query => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE',
+        dbh            => $dbh,
+        find_job_query => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT %s',
                              ($opts->{table_name}||'job'),
                              join(', ', map { "'$_'" } @{$opts->{functions}}),
+                             ($opts->{job_find_size}||50),
                          ),
+        dequeue_query  => sprintf('DELETE FROM %s WHERE id = ?', ($opts->{table_name}||'job')),
     }, $class;
 }
 
 sub dequeue {
     my $self = shift;
 
-    my $job = try {
+    my $job;
+    try {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
-        $self->{dbh}->begin_work;
 
-            my $sth = $self->{dbh}->prepare_cached($self->{dequeue_query});
-            $sth->execute(@{$self->{functions}});
-            my $row = $sth->fetchrow_hashref;
-            $sth->finish;
+        my $sth = $self->{dbh}->prepare($self->{find_job_query});
+        $sth->execute() or dir $self->{dbh}->errstr;
 
-            if ($row) {
-                $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
-                $sth->execute($row->{id});
-                $sth->finish;
+        while (my $row = $sth->fetchrow_hashref) {
+            my $del_sth = $self->{dbh}->prepare_cached($self->{dequeue_query});
+            $del_sth->execute($row->{id});
+            $del_sth->finish;
+
+            if ($del_sth->rows) {
+                $job = $row;
+                last;
             }
+        }
 
-        $self->{dbh}->commit;
-
-        return $row;
-
+        $sth->finish;
     } catch {
         Carp::carp("can't get job from job queue database: $_");
-        return;
     };
 
     $job;
@@ -77,6 +78,12 @@ Key word of job which this Jonk instance looks for.
 specific job table name.
 
 Default job table name is `job`.
+
+=item * $options->{job_find_size}
+
+specific lookup job record size.
+
+Default 50.
 
 =back
 
