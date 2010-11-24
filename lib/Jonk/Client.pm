@@ -19,13 +19,14 @@ sub new {
 sub enqueue {
     my ($self, $func, $arguments) = @_;
 
-    my $job_id = try {
+    my $job_id;
+    try {
         my $sth = $self->{dbh}->prepare_cached('INSERT INTO job (func, arg, enqueue_time) VALUES (?,?,?)');
         $sth->execute($func, $arguments->{arg}, $arguments->{time});
-        $self->_insert_id($self->{dbh}, $sth);
+        $job_id = $self->_insert_id($self->{dbh}, $sth);
+        $sth->finish;
     } catch {
         Carp::carp("can't enqueue for job queue database: $_");
-        return;
     };
 
     $job_id;
