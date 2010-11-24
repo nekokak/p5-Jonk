@@ -36,6 +36,7 @@ worker script:
             my $worker = $job->{func}; # Your::Worker;
             $worker->work($job);
         }
+        sleep(3); # wait for 3 sec.
     }
     
 =cut
