@@ -12,7 +12,8 @@ sub new {
     }
 
     bless {
-        dbh => $dbh,
+        dbh           => $dbh,
+        enqueue_query => sprintf('INSERT INTO %s (func, arg, enqueue_time) VALUES (?,?,?)', ($opts->{table_name}||'job')),
     }, $class;
 }
 
@@ -21,7 +22,7 @@ sub enqueue {
 
     my $job_id;
     try {
-        my $sth = $self->{dbh}->prepare_cached('INSERT INTO job (func, arg, enqueue_time) VALUES (?,?,?)');
+        my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
         $sth->execute($func, $arguments->{arg}, $arguments->{time});
         $job_id = $self->_insert_id($self->{dbh}, $sth);
         $sth->finish;

@@ -12,20 +12,22 @@ sub new {
     }
 
     bless {
-        dbh       => $dbh,
-        functions => ($opts->{functions}||[]),
+        dbh           => $dbh,
+
+        dequeue_query => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE',
+                             ($opts->{table_name}||'job'),
+                             join(', ', map { "'$_'" } @{$opts->{functions}}),
+                         ),
     }, $class;
 }
 
 sub dequeue {
     my $self = shift;
 
-    my $sql = sprintf 'SELECT * FROM job WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE', join( ", ", ("?") x @{$self->{functions}} );
-
     my $job = try {
         $self->{dbh}->begin_work;
 
-            my $sth = $self->{dbh}->prepare_cached($sql);
+            my $sth = $self->{dbh}->prepare_cached($self->{dequeue_query});
             $sth->execute(@{$self->{functions}});
             my $row = $sth->fetchrow_hashref;
             $sth->finish;

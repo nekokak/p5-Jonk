@@ -29,7 +29,7 @@ sub cleanup {
         AutoCommit => 1,
         RaiseError => 1,
     });
-    $dbh->do('DROP TABLE job');
+    $dbh->do('TRUNCATE TABLE job');
 }
 
 1;

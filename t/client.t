@@ -4,10 +4,19 @@ use t::Utils;
 use Test::More;
 use DBI;
 use Jonk::Client;
-use Jonk::Worker;
 
 my $mysqld = t::Utils->setup;
 my $dbh = DBI->connect($mysqld->dsn(dbname => 'test'));
+
+subtest 'client / flexible job table name' => sub {
+    my $jonk = Jonk::Client->new($dbh);
+    is $jonk->{enqueue_query}, 'INSERT INTO job (func, arg, enqueue_time) VALUES (?,?,?)';
+
+    $jonk = Jonk::Client->new($dbh, +{table_name => 'jonk_job'});
+    is $jonk->{enqueue_query}, 'INSERT INTO jonk_job (func, arg, enqueue_time) VALUES (?,?,?)';
+
+    done_testing;
+};
 
 subtest 'enqueue' => sub {
     my $jonk = Jonk::Client->new($dbh);
@@ -26,22 +35,6 @@ subtest 'enqueue' => sub {
     is $row->{func}, 'MyWorker';
     is $row->{enqueue_time}, $time;
 
-    done_testing;
-};
-
-subtest 'dequeue' => sub {
-    my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});
-    my $job = $jonk->dequeue();
-    is $job->{arg}, 'arg';
-    is $job->{func}, 'MyWorker';
-
-    done_testing;
-};
-
-subtest 'dequeue / no job' => sub {
-    my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});
-    my $job = $jonk->dequeue();
-    ok not $job;
     done_testing;
 };
 
