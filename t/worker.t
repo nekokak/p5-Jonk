@@ -26,10 +26,7 @@ subtest 'worker / flexible job table name' => sub {
 subtest 'dequeue' => sub {
     my $client = Jonk::Client->new($dbh);
 
-    my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
-    my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
-
-    my $job_id = $client->enqueue('MyWorker' => +{ arg => 'arg', time => $time });
+    my $job_id = $client->enqueue('MyWorker' => +{ arg => 'arg' });
     ok $job_id;
 
     my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});

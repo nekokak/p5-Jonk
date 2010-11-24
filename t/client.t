@@ -20,10 +20,27 @@ subtest 'client / flexible job table name' => sub {
 subtest 'enqueue' => sub {
     my $jonk = Jonk::Client->new($dbh);
 
-    my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
-    my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg' });
+    ok $job_id;
 
-    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg', time => $time });
+    my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
+    $sth->execute($job_id);
+    my $row = $sth->fetchrow_hashref;
+
+    is $row->{arg}, 'arg';
+    is $row->{func}, 'MyWorker';
+
+    done_testing;
+};
+
+subtest 'enqueue / and callback' => sub {
+    my $time;
+    my $jonk = Jonk::Client->new($dbh,+{callback => sub {
+        my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
+        $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+    }});
+
+    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg' });
     ok $job_id;
 
     my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
