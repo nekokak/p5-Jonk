@@ -24,6 +24,8 @@ sub dequeue {
     my $self = shift;
 
     my $job = try {
+        local $self->{dbh}->{RaiseError} = 1;
+        local $self->{dbh}->{PrintError} = 0;
         $self->{dbh}->begin_work;
 
             my $sth = $self->{dbh}->prepare_cached($self->{dequeue_query});

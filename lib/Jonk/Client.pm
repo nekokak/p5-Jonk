@@ -22,6 +22,8 @@ sub enqueue {
 
     my $job_id;
     try {
+        local $self->{dbh}->{RaiseError} = 1;
+        local $self->{dbh}->{PrintError} = 0;
         my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
         $sth->execute($func, $arguments->{arg}, $arguments->{time});
         $job_id = $self->_insert_id($self->{dbh}, $sth);
