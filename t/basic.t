@@ -1,20 +1,12 @@
 use strict;
 use warnings;
+use t::Utils;
 use Test::More;
 use DBI;
 use Jonk;
 
-my $dbh = DBI->connect('dbi:SQLite:');
-
-$dbh->do(q{
-    CREATE TABLE job (
-        id           integer,
-        func         text,
-        arg          text,
-        enqueue_time text,
-        primary key ( id )
-    )
-});
+my $mysqld = t::Utils->setup;
+my $dbh = DBI->connect($mysqld->dsn(dbname => 'test'));
 
 subtest 'enqueue' => sub {
     my $jonk = Jonk->new($dbh);
@@ -39,6 +31,8 @@ subtest 'dequeue' => sub {
 
     done_testing;
 };
+
+t::Utils->cleanup($mysqld);
 
 done_testing;
 
