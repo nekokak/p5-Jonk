@@ -13,7 +13,6 @@ sub new {
 
     bless {
         dbh           => $dbh,
-
         dequeue_query => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT 1 FOR UPDATE',
                              ($opts->{table_name}||'job'),
                              join(', ', map { "'$_'" } @{$opts->{functions}}),
@@ -70,6 +69,12 @@ $dbh is database handle.
 =item * $options->{functions}
 
 Key word of job which this Jonk instance looks for.
+
+=item * $options->{table_name}
+
+specific job table name.
+
+Default job table name is `job`.
 
 =back
 

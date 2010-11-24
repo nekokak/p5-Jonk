@@ -53,7 +53,7 @@ __END__
 
 Jonk::Client - 
 
-=head2 my $jonk = Jonk->new($dbh);
+=head2 my $jonk = Jonk->new($dbh, $options);
 
 Creates a new Jonk object, and returns the object.
 
@@ -62,6 +62,12 @@ Creates a new Jonk object, and returns the object.
 =item * $dbh
 
 $dbh is database handle.
+
+=item * $options->{table_name}
+
+specific job table name.
+
+Default job table name is `job`.
 
 =back
 
