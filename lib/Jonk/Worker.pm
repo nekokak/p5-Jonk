@@ -31,7 +31,6 @@ sub dequeue {
             $sth->finish;
 
             if ($row) {
-
                 $sth = $self->{dbh}->prepare_cached('DELETE FROM job WHERE id = ?');
                 $sth->execute($row->{id});
                 $sth->finish;
@@ -43,6 +42,7 @@ sub dequeue {
 
     } catch {
         Carp::carp("can't get job from job queue database: $_");
+        return;
     };
 
     $job;

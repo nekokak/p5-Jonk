@@ -12,7 +12,7 @@ sub new {
     }
 
     bless {
-        dbh   => $dbh,
+        dbh => $dbh,
     }, $class;
 }
 
@@ -25,6 +25,7 @@ sub enqueue {
         $self->_insert_id($self->{dbh}, $sth);
     } catch {
         Carp::carp("can't enqueue for job queue database: $_");
+        return;
     };
 
     $job_id;
