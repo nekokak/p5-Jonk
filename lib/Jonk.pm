@@ -68,6 +68,15 @@ dequeue client class.
         enqueue_time text
     )
 
+=head2 PostgreSQL
+
+    CREATE TABLE job (
+        id           SERIAL PRIMARY KEY,
+        func         TEXT NOT NULL,
+        arg          TEXT,
+        enqueue_time TIMESTAMP NOT NULL
+    )
+
 =head1 SUPPORT
 
   irc: #jonk@irc.perl.org
