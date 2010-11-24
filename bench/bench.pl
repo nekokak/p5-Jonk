@@ -8,7 +8,6 @@ use DBI;
 use Parallel::ForkManager;
 
 my $db = DBI->connect('dbi:mysql:jonk','root','');
-=pod
 $db->do(q{DROP TABLE job});
 $db->do(q{
     CREATE TABLE job (
@@ -19,10 +18,8 @@ $db->do(q{
         primary key ( id )
     )
 });
-=cut
 my $pm = Parallel::ForkManager->new(50);
 
-=pod
 my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
 my $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
 
@@ -40,7 +37,6 @@ timethese(10, {
         $pm->wait_all_children;
     },
 });
-=cut
 
 timethese(10, {
     'dequeue' => sub {
