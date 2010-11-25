@@ -21,7 +21,7 @@ sub new {
                              ($opts->{job_find_size}||50),
                          ),
         dequeue_query    => sprintf('DELETE FROM %s WHERE id = ?', ($opts->{table_name}||'job')),
-        _errstr          => '',
+        _errstr          => undef,
     }, $class;
 }
 
@@ -32,7 +32,7 @@ sub dequeue {
 
     my $job;
     try {
-        $self->{_errstr}='';
+        $self->{_errstr} = undef;
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 

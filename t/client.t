@@ -29,6 +29,7 @@ subtest 'enqueue' => sub {
 
     is $row->{arg}, 'arg';
     is $row->{func}, 'MyWorker';
+    ok not $jonk->errstr;
 
     done_testing;
 };
@@ -50,6 +51,16 @@ subtest 'enqueue / and enqueue_time_callback' => sub {
     is $row->{arg}, 'arg';
     is $row->{func}, 'MyWorker';
     is $row->{enqueue_time}, $time;
+
+    done_testing;
+};
+
+subtest 'error handling' => sub {
+    my $jonk = Jonk::Client->new($dbh, +{table_name => 'jonk_job'});
+
+    my $job_id = $jonk->enqueue('MyWorker', 'arg');
+    ok not $job_id;
+    like $jonk->errstr, qr/can't enqueue for job queue database:/;
 
     done_testing;
 };

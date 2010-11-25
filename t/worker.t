@@ -35,6 +35,7 @@ subtest 'dequeue' => sub {
     my $job = $jonk->dequeue();
     is $job->{arg}, 'arg';
     is $job->{func}, 'MyWorker';
+    ok not $jonk->errstr;
 
     done_testing;
 };

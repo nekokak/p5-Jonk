@@ -18,14 +18,18 @@ sub new {
             my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
+        _errstr       => undef,
     }, $class;
 }
+
+sub errstr {$_[0]->{_errstr}}
 
 sub enqueue {
     my ($self, $func, $arg) = @_;
 
     my $job_id;
     try {
+        $self->{_errstr} = undef;
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
@@ -38,7 +42,7 @@ sub enqueue {
         $job_id = _insert_id($self->{dbh});
         $sth->finish;
     } catch {
-        Carp::carp("can't enqueue for job queue database: $_");
+        $self->{_errstr} = "can't enqueue for job queue database: $_"
     };
 
     $job_id;
@@ -118,6 +122,17 @@ serialize is not done in Jonk.
 Please pass data that does serialize if it is necessary. 
 
 =back
+
+=head2 $jonk->errstr;
+
+get most recent error infomation.
+
+=head1 ERROR HANDLING
+
+  my $job_id = $jonk->enqueue('func','arg');
+  if ($jonk->errstr) {
+      die $jonk->errstr;
+  }
 
 =cut
 
