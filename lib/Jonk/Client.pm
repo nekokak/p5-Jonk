@@ -22,7 +22,7 @@ sub new {
 }
 
 sub enqueue {
-    my ($self, $func, $arguments) = @_;
+    my ($self, $func, $arg) = @_;
 
     my $job_id;
     try {
@@ -31,7 +31,7 @@ sub enqueue {
 
         my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
         $sth->bind_param(1, $func);
-        $sth->bind_param(2, $arguments->{arg}, _bind_param_attr($self->{dbh}));
+        $sth->bind_param(2, $arg, _bind_param_attr($self->{dbh}));
         $sth->bind_param(3, $self->{enqueue_time_callback}->());
         $sth->execute();
 
@@ -102,7 +102,7 @@ Default local time create.
 
 =back
 
-=head2 my $job_id = $jonk->enqueue($func, $arguments);
+=head2 my $job_id = $jonk->enqueue($func, $arg);
 
 enqueue a job to a database.
 returns job.id.
@@ -111,7 +111,7 @@ returns job.id.
 
 =item * $func
 
-=item * $arguments->{arg}
+=item * $arg
 
 job argument data.
 serialize is not done in Jonk. 

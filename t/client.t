@@ -20,7 +20,7 @@ subtest 'client / flexible job table name' => sub {
 subtest 'enqueue' => sub {
     my $jonk = Jonk::Client->new($dbh);
 
-    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg' });
+    my $job_id = $jonk->enqueue('MyWorker', 'arg');
     ok $job_id;
 
     my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
@@ -40,7 +40,7 @@ subtest 'enqueue / and enqueue_time_callback' => sub {
         $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
     }});
 
-    my $job_id = $jonk->enqueue('MyWorker' => +{ arg => 'arg' });
+    my $job_id = $jonk->enqueue('MyWorker', 'arg');
     ok $job_id;
 
     my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');

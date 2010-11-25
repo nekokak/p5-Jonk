@@ -14,7 +14,7 @@ enqueue script:
     
     my $dbh = DBI->connect('dbi:mysql:test','user','pass');
     my $jonk = Jonk::Client->new($dbh);
-    $jonk->enqueue('worker_key',{arg => 'job_data_here'});
+    $jonk->enqueue('worker_key','job_data_here');
 
 worker script:
 

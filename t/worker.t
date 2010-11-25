@@ -26,7 +26,7 @@ subtest 'worker / flexible job table name' => sub {
 subtest 'dequeue' => sub {
     my $client = Jonk::Client->new($dbh);
 
-    my $job_id = $client->enqueue('MyWorker' => +{ arg => 'arg' });
+    my $job_id = $client->enqueue('MyWorker', 'arg');
     ok $job_id;
 
     my $jonk = Jonk::Worker->new($dbh, {functions => [qw/MyWorker/]});
