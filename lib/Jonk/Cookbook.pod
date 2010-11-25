@@ -8,4 +8,6 @@ L<Jonk::Cookbook::Basic> - basic usage.
 
 L<Jonk::Cookbook::ForkModel> - with Parallel::Prefork.
 
+L<Jonk::Cookbook::DequeueSpecificJob> - dequeue specific job.
+
 =cut
