@@ -11,27 +11,35 @@ sub new {
         Carp::croak('missing job queue database handle.');
     }
 
+    my $table_name = ($opts->{table_name}||'job');
     bless {
-        dbh            => $dbh,
-        find_job_query => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT %s',
-                             ($opts->{table_name}||'job'),
+        dbh              => $dbh,
+        lookup_job_query => sprintf('SELECT * FROM %s WHERE id = ?', $table_name),
+        find_job_query   => sprintf('SELECT * FROM %s WHERE func IN (%s) ORDER BY id LIMIT %s',
+                             $table_name,
                              join(', ', map { "'$_'" } @{$opts->{functions}}),
                              ($opts->{job_find_size}||50),
                          ),
-        dequeue_query  => sprintf('DELETE FROM %s WHERE id = ?', ($opts->{table_name}||'job')),
+        dequeue_query    => sprintf('DELETE FROM %s WHERE id = ?', ($opts->{table_name}||'job')),
     }, $class;
 }
 
 sub dequeue {
-    my $self = shift;
+    my ($self, $job_id) = @_;
 
     my $job;
     try {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $sth = $self->{dbh}->prepare($self->{find_job_query});
-        $sth->execute() or dir $self->{dbh}->errstr;
+        my $sth;
+        if ($job_id) {
+            $sth = $self->{dbh}->prepare_cached($self->{lookup_job_query});
+            $sth->execute($job_id);
+        } else {
+            $sth = $self->{dbh}->prepare_cached($self->{find_job_query});
+            $sth->execute();
+        }
 
         while (my $row = $sth->fetchrow_hashref) {
             my $del_sth = $self->{dbh}->prepare_cached($self->{dequeue_query});
@@ -87,13 +95,21 @@ Default 50.
 
 =back
 
-=head2 my $job_hash_ref = $jonk->dequeue;
+=head2 my $job_hash_ref = $jonk->dequeue($job_id);
 
 dequeue a job from a database.
 
 returns job hashref data.
 
 Please do deserialize if it is necessary. 
+
+=over 4
+
+=item * $job_id (optional)
+
+lookup specific $job_id's job.
+
+=back
 
 =cut
 
