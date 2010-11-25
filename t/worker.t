@@ -60,6 +60,15 @@ subtest 'dequeue / lookup specific job_id' => sub {
     done_testing;
 };
 
+subtest 'error handling' => sub {
+    my $jonk = Jonk::Worker->new($dbh, {table_name => 'jonk_job', functions => [qw/MyWorker/]});
+    my $job = $jonk->dequeue;
+
+    like $jonk->errstr, qr/can't get job from job queue database:/;
+
+    done_testing;
+};
+
 t::Utils->cleanup($dbh);
 
 done_testing;

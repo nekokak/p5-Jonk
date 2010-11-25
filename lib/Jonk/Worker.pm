@@ -21,14 +21,18 @@ sub new {
                              ($opts->{job_find_size}||50),
                          ),
         dequeue_query    => sprintf('DELETE FROM %s WHERE id = ?', ($opts->{table_name}||'job')),
+        _errstr          => '',
     }, $class;
 }
+
+sub errstr {$_[0]->{_errstr}}
 
 sub dequeue {
     my ($self, $job_id) = @_;
 
     my $job;
     try {
+        $self->{_errstr}='';
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
@@ -54,7 +58,7 @@ sub dequeue {
 
         $sth->finish;
     } catch {
-        Carp::carp("can't get job from job queue database: $_");
+        $self->{_errstr} = "can't get job from job queue database: $_";
     };
 
     $job;
@@ -110,6 +114,17 @@ Please do deserialize if it is necessary.
 lookup specific $job_id's job.
 
 =back
+
+=head2 $jonk->errstr;
+
+get most recent error infomation.
+
+=head1 ERROR HANDLING
+
+  my $job = $jonk->dequeue;
+  if ($jonk->errstr) {
+      die $jonk->errstr;
+  }
 
 =cut
 
