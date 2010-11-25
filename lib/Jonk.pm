@@ -73,7 +73,7 @@ dequeue client class.
     CREATE TABLE job (
         id           SERIAL PRIMARY KEY,
         func         TEXT NOT NULL,
-        arg          TEXT,
+        arg          BYTEA,
         enqueue_time TIMESTAMP NOT NULL
     )
 
