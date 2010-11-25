@@ -28,9 +28,14 @@ sub enqueue {
     try {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
+
         my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
-        $sth->execute($func, $arguments->{arg}, $self->{enqueue_time_callback}->());
-        $job_id = $self->_insert_id($self->{dbh});
+        $sth->bind_param(1, $func);
+        $sth->bind_param(2, $arguments->{arg}, _bind_param_attr($self->{dbh}));
+        $sth->bind_param(3, $self->{enqueue_time_callback}->());
+        $sth->execute();
+
+        $job_id = _insert_id($self->{dbh});
         $sth->finish;
     } catch {
         Carp::carp("can't enqueue for job queue database: $_");
@@ -40,7 +45,7 @@ sub enqueue {
 }
 
 sub _insert_id {
-    my ($self, $dbh) = @_;
+    my $dbh = shift;
 
     my $driver = $dbh->{Driver}{Name};
     if ( $driver eq 'mysql' ) {
@@ -52,6 +57,18 @@ sub _insert_id {
     } else {
         Carp::croak "Don't know how to get last insert id for $driver";
     }
+}
+
+sub _bind_param_attr {
+    my $dbh = shift;
+
+    my $driver = $dbh->{Driver}{Name};
+    if ( $driver eq 'Pg' ) {
+        return { pg_type => DBD::Pg::PG_BYTEA() };
+    } elsif ( $driver eq 'SQLite' ) {
+        return DBI::SQL_BLOB();
+    }
+    return;
 }
 
 1;
