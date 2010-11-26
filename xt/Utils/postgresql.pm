@@ -13,15 +13,8 @@ my $pgsql = Test::postgresql->new
     no warnings "redefine";
     sub t::Utils::setup {
         my $dbh = DBI->connect($pgsql->dsn);
-        local $dbh->{"Warn"} = 0; # ignore NOTICE message at create table.
-        $dbh->do(q{
-            CREATE TABLE job (
-                id           SERIAL PRIMARY KEY ,
-                func         TEXT NOT NULL,
-                arg          BYTEA,
-                enqueue_time TIMESTAMP NOT NULL
-            )
-        });
+        local $dbh->{"Warn"} = 0;
+        $dbh->do(t::Utils::_get_schema($dbh));
         $dbh;
     }
 }
