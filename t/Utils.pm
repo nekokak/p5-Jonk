@@ -5,18 +5,22 @@ use DBI;
 use Pod::Simple::SimpleTree;
 
 sub _get_schema {
-    my $dbh = shift;
+    my $dbh   = shift;
+    my $table = shift || "job";
 
     my $driver = $dbh->{Driver}{Name};
+    my $sql;
     if ( $driver eq 'mysql' ) {
-        return _read_pod('MySQL');
+        $sql = _read_pod('MySQL');
     } elsif ( $driver eq 'Pg' ) {
-        return _read_pod('PostgreSQL');
+        $sql = _read_pod('PostgreSQL');
     } elsif ( $driver eq 'SQLite' ) {
-        return _read_pod('SQLite');
+        $sql = _read_pod('SQLite');
     } else {
         Carp::croak "this driver unsupport: $driver";
     }
+    $sql =~ s/(CREATE\s+TABLE\s+)job/CREATE TABLE $table/;
+    $sql;
 }
 
 sub _read_pod {
@@ -40,14 +44,16 @@ sub _read_pod {
 }
 
 sub setup {
+    my ($class, $table) = @_;
     my $dbh = DBI->connect('dbi:SQLite:');
-    $dbh->do(_get_schema($dbh));
+    $dbh->do(_get_schema($dbh, $table));
     $dbh;
 }
 
 sub cleanup {
-    my ($class, $dbh) = @_;
-    $dbh->do('DROP TABLE job');
+    my ($class, $dbh, $table) = @_;
+    $table ||= "job";
+    $dbh->do("DROP TABLE $table");
 }
 
 1;

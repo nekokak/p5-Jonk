@@ -12,8 +12,9 @@ my $mysql = Test::mysqld->new
 {
     no warnings "redefine";
     sub t::Utils::setup {
+        my ($class, $table) = @_;
         my $dbh = DBI->connect($mysql->dsn( dbname => "test" ));
-        $dbh->do(t::Utils::_get_schema($dbh));
+        $dbh->do(t::Utils::_get_schema($dbh, $table));
         $dbh;
     }
 }

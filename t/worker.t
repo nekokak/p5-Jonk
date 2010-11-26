@@ -72,5 +72,23 @@ subtest 'error handling' => sub {
 
 t::Utils->cleanup($dbh);
 
+
+subtest 'dequeue / flexible job table name' => sub {
+    my $dbh = t::Utils->setup("my_job");
+    my $client = Jonk::Client->new($dbh, { table_name => "my_job" });
+
+    my $job_id = $client->enqueue('MyWorker', 'arg');
+    ok $job_id;
+
+    my $jonk = Jonk::Worker->new($dbh, { table_name => "my_job", functions => [qw/MyWorker/]});
+    my $job = $jonk->dequeue();
+    is $job->{arg}, 'arg';
+    is $job->{func}, 'MyWorker';
+    ok not $jonk->errstr;
+
+    t::Utils->cleanup($dbh, "my_job");
+    done_testing;
+};
+
 done_testing;
 

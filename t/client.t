@@ -67,5 +67,25 @@ subtest 'error handling' => sub {
 
 t::Utils->cleanup($dbh);
 
+
+subtest 'enqueue / flexible job table name' => sub {
+    my $dbh = t::Utils->setup("my_job");
+    my $jonk = Jonk::Client->new($dbh, +{table_name => "my_job"});
+
+    my $job_id = $jonk->enqueue('MyWorker', 'arg');
+    ok $job_id;
+
+    my $sth = $dbh->prepare('SELECT * FROM my_job WHERE id = ?');
+    $sth->execute($job_id);
+    my $row = $sth->fetchrow_hashref;
+
+    is $row->{arg}, 'arg';
+    is $row->{func}, 'MyWorker';
+    ok not $jonk->errstr;
+
+    t::Utils->cleanup($dbh, "my_job");
+    done_testing;
+};
+
 done_testing;
 

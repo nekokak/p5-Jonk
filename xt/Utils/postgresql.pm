@@ -12,9 +12,10 @@ my $pgsql = Test::postgresql->new
 {
     no warnings "redefine";
     sub t::Utils::setup {
+        my ($class, $table) = @_;
         my $dbh = DBI->connect($pgsql->dsn);
         local $dbh->{"Warn"} = 0;
-        $dbh->do(t::Utils::_get_schema($dbh));
+        $dbh->do(t::Utils::_get_schema($dbh, $table));
         $dbh;
     }
 }
