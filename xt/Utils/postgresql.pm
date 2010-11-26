@@ -13,14 +13,7 @@ my $pgsql = Test::postgresql->new
     no warnings "redefine";
     sub t::Utils::setup {
         my $dbh = DBI->connect($pgsql->dsn);
-        $dbh->do(q{
-            CREATE TABLE job (
-                id           SERIAL PRIMARY KEY ,
-                func         TEXT NOT NULL,
-                arg          BYTEA,
-                enqueue_time TIMESTAMP NOT NULL
-            )
-        });
+        $dbh->do(t::Utils::_get_schema($dbh));
         $dbh;
     }
 }
