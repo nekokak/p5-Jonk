@@ -82,9 +82,29 @@ __END__
 
 Jonk::Client - job enqueue client class.
 
+=head1 SYNOPSIS
+
+    use DBI; 
+    use Jonk::Client;
+    use DateTime;
+    
+    my $dbh = DBI->connect(...);
+    my $jonk = Jonk::Client->new($dbh, 
+        {
+            table_name => 'jonk_job',
+            enqueue_time_callback => sub {
+                DateTime->now->strftime('%Y-%m-%d %H:%M:%S');
+            },
+        }
+    );
+
+=head1 METHODS
+
 =head2 my $jonk = Jonk::Client->new($dbh, $options);
 
 Creates a new Jonk object, and returns the object.
+
+$option is an optional settings.
 
 =over 4
 
@@ -115,15 +135,19 @@ returns job.id.
 
 =item * $func
 
+specific your worker funcname.
+
 =item * $arg
 
 job argument data.
+
 serialize is not done in Jonk. 
+
 Please pass data that does serialize if it is necessary. 
 
 =back
 
-=head2 $jonk->errstr;
+=head2 my $errstr = $jonk->errstr;
 
 get most recent error infomation.
 

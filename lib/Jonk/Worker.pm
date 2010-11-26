@@ -71,9 +71,24 @@ __END__
 
 Jonk::Worker - get a job data class.
 
+=head1 SYNOPSIS
+
+    use DBI; 
+    use Jonk::Worker;
+    
+    my $dbh = DBI->connect(...);
+    my $jonk = Jonk::Worker->new($dbh, {functions => ['MyWorker']});
+    my $job = $jonk->dequeue;
+    print $job->{func}; # MyWorker
+    print $job->{arg};  # arg
+
+=head1 METHODS
+
 =head2 my $jonk = Jonk::Worker->new($dbh, $options);
 
 Creates a new Jonk object, and returns the object.
+
+$options is an optional settings.
 
 =over 4
 
