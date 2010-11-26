@@ -10,14 +10,15 @@ sub new {
     unless ($dbh) {
         Carp::croak('missing job queue database handle.');
     }
-
+    my $table_name = $opts->{table_name} || "job";
     bless {
         dbh           => $dbh,
-        enqueue_query => sprintf('INSERT INTO %s (func, arg, enqueue_time) VALUES (?,?,?)', ($opts->{table_name}||'job')),
+        enqueue_query => sprintf('INSERT INTO %s (func, arg, enqueue_time) VALUES (?,?,?)', $table_name),
         enqueue_time_callback => ($opts->{enqueue_time_callback}||sub{
             my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
+        table_name    => $table_name,
         _errstr       => undef,
     }, $class;
 }
@@ -39,7 +40,7 @@ sub enqueue {
         $sth->bind_param(3, $self->{enqueue_time_callback}->());
         $sth->execute();
 
-        $job_id = _insert_id($self->{dbh});
+        $job_id = $self->_insert_id($self->{dbh});
         $sth->finish;
     } catch {
         $self->{_errstr} = "can't enqueue for job queue database: $_"
@@ -49,13 +50,14 @@ sub enqueue {
 }
 
 sub _insert_id {
-    my $dbh = shift;
+    my $self = shift;
+    my $dbh  = shift;
 
     my $driver = $dbh->{Driver}{Name};
     if ( $driver eq 'mysql' ) {
         return $dbh->{mysql_insertid};
     } elsif ( $driver eq 'Pg' ) {
-        return $dbh->last_insert_id( undef, undef, undef, undef,{ sequence => join( '_', 'job', 'id', 'seq' ) } );
+        return $dbh->last_insert_id( undef, undef, undef, undef,{ sequence => join( '_', $self->{table_name}, 'id', 'seq' ) } );
     } elsif ( $driver eq 'SQLite' ) {
         return $dbh->func('last_insert_rowid');
     } else {
