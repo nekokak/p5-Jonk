@@ -1,5 +1,9 @@
 Revision history for Perl extension Jonk
 
+0.03
+   2010-11-28
+        - FIXED : test use DBD::SQLite.
+
 0.02
    2010-11-26
         - ADD   : more document.

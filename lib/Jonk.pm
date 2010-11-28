@@ -2,7 +2,7 @@ package Jonk;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 1;
 __END__
@@ -96,8 +96,6 @@ fujiwara
 =head1 AUTHOR
 
 Atsushi Kobayashi E<lt>nekokak _at_ gmail _dot_ comE<gt>
-
-=head1 SEE ALSO
 
 =head1 LICENSE
 

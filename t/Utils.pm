@@ -3,6 +3,12 @@ use strict;
 use warnings;
 use DBI;
 use Pod::Simple::SimpleTree;
+use Test::More;
+
+BEGIN {
+  eval "use DBD::SQLite";
+  plan skip_all => 'needs DBD::SQLite for testing' if $@;
+}
 
 sub _get_schema {
     my $dbh   = shift;
