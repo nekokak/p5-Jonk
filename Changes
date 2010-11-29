@@ -1,5 +1,9 @@
 Revision history for Perl extension Jonk
 
+0.04
+   2010-11-29
+        - FIXED : requires 'DBI' for Makefile.PL.
+
 0.03
    2010-11-28
         - FIXED : test use DBD::SQLite.

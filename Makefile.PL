@@ -2,6 +2,7 @@ use inc::Module::Install;
 name 'Jonk';
 all_from 'lib/Jonk.pm';
 
+requires 'DBI';
 requires 'Try::Tiny';
 
 tests 't/*.t';
