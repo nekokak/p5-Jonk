@@ -1,5 +1,9 @@
 Revision history for Perl extension Jonk
 
+0.05
+   2010-12-01
+        - FIXED : no use Pod::Simple for testing.
+
 0.04
    2010-11-29
         - FIXED : requires 'DBI' for Makefile.PL.

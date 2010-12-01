@@ -2,7 +2,6 @@ package t::Utils;
 use strict;
 use warnings;
 use DBI;
-use Pod::Simple::SimpleTree;
 use Test::More;
 
 BEGIN {
@@ -32,21 +31,25 @@ sub _get_schema {
 sub _read_pod {
     my $type = shift;
 
-    my $pod_tree = Pod::Simple::SimpleTree->new->parse_file('./lib/Jonk.pm')->root;
+    open my $fh, '<', './lib/Jonk.pm';
     my $read_schema = 0;
-    for my $row (@$pod_tree) {
-
-        unless ($read_schema) {
-            next unless ref($row) eq 'ARRAY';
-            next unless $row->[0] eq 'head2';
-            if ($row->[2] eq $type) {
-                $read_schema = 1;
-            }
+    my $schema='';
+    while (<$fh>) {
+        my $line = $_;
+        if ($line =~ /$type/) {
+            $read_schema = 1;
             next;
         }
-
-        return $row->[2];
+        if ($read_schema && $line =~ /^=head/) {
+            $read_schema = 0;
+            last;
+        }
+        if ($read_schema) {
+            $schema .= $line;
+            next;
+        }
     }
+    $schema;
 }
 
 sub setup {
