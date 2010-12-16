@@ -84,7 +84,7 @@ Jonk::Worker - get a job data class.
 
 =head1 METHODS
 
-=head2 my $jonk = Jonk::Worker->new($dbh, $options);
+=head2 my $jonk = Jonk::Worker->new($dbh, [$options]);
 
 Creates a new Jonk object, and returns the object.
 
@@ -114,13 +114,15 @@ Default 50.
 
 =back
 
-=head2 my $job_hash_ref = $jonk->dequeue($job_id);
+=head2 my $job_hash_ref = $jonk->dequeue([$job_id]);
 
 dequeue a job from a database.
 
 returns job hashref data.
 
 Please do deserialize if it is necessary. 
+
+$job_id is optional argument.
 
 =over 4
 

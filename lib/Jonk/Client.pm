@@ -102,7 +102,7 @@ Jonk::Client - job enqueue client class.
 
 =head1 METHODS
 
-=head2 my $jonk = Jonk::Client->new($dbh, $options);
+=head2 my $jonk = Jonk::Client->new($dbh, [$options]);
 
 Creates a new Jonk object, and returns the object.
 
