@@ -10,7 +10,7 @@ sub new {
     }, $class;
 }
 
-sub dequeue { $_[0]->{jonk}->_dequeue($_[0]->id) }
+sub completed { $_[0]->{jonk}->_completed($_[0]->id) }
 
 sub id            { $_[0]->{job}->{id}            }
 sub func          { $_[0]->{job}->{func}          }

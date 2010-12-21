@@ -19,8 +19,8 @@ sub new {
     bless {
         dbh           => $dbh,
 
-        enqueue_query => sprintf('INSERT INTO %s (func, arg, enqueue_time, grabbed_until) VALUES (?,?,?,0)', $table_name),
-        enqueue_time_callback => ($opts->{enqueue_time_callback}||sub{
+        insert_query => sprintf('INSERT INTO %s (func, arg, enqueue_time, grabbed_until) VALUES (?,?,?,0)', $table_name),
+        insert_time_callback => ($opts->{insert_time_callback}||sub{
             my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
@@ -33,16 +33,17 @@ sub new {
                          ),
         grab_job_query   => sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $table_name),
 
-        dequeue_query    => sprintf('DELETE FROM %s WHERE id = ?', $table_name),
+        purge_job_query  => sprintf('DELETE FROM %s WHERE id = ?', $table_name),
 
         table_name    => $table_name,
+
         _errstr       => undef,
     }, $class;
 }
 
 sub errstr {$_[0]->{_errstr}}
 
-sub enqueue {
+sub insert {
     my ($self, $func, $arg) = @_;
 
     my $job_id;
@@ -51,16 +52,16 @@ sub enqueue {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $sth = $self->{dbh}->prepare_cached($self->{enqueue_query});
+        my $sth = $self->{dbh}->prepare_cached($self->{insert_query});
         $sth->bind_param(1, $func);
         $sth->bind_param(2, $arg, _bind_param_attr($self->{dbh}));
-        $sth->bind_param(3, $self->{enqueue_time_callback}->());
+        $sth->bind_param(3, $self->{insert_time_callback}->());
         $sth->execute();
 
         $job_id = $self->{dbh}->last_insert_id("","",$self->{table_name},"");
         $sth->finish;
     } catch {
-        $self->{_errstr} = "can't enqueue for job queue database: $_"
+        $self->{_errstr} = "can't insert for job queue database: $_"
     };
 
     $job_id;
@@ -78,7 +79,7 @@ sub _bind_param_attr {
     return;
 }
 
-sub lookup {
+sub grab_job {
     my ($self, $job_id) = @_;
 
     my $job;
@@ -111,17 +112,17 @@ sub lookup {
 
         $sth->finish;
     } catch {
-        $self->{_errstr} = "can't get job from job queue database: $_";
+        $self->{_errstr} = "can't grab job from job queue database: $_";
     };
 
     $job;
 }
 
-sub _dequeue {
+sub _completed {
     my ($self, $job_id) = @_;
 
     try {
-        my $sth = $self->{dbh}->prepare_cached($self->{dequeue_query});
+        my $sth = $self->{dbh}->prepare_cached($self->{purge_job_query});
         $sth->execute($job_id);
         $sth->finish;
         return $sth->rows;
@@ -145,9 +146,9 @@ Jonk - simple job tank manager.
     use Jonk;
     my $dbh = DBI->connect(...);
     my $jonk = Jonk->new($dbh, {functions => ['MyWorker']});
-    # enqueue job
+    # insert job
     {
-        $jonk->enqueue('MyWorker', 'arg');
+        $jonk->insert('MyWorker', 'arg');
     }
 
     # dequeue job

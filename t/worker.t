@@ -6,55 +6,55 @@ use Jonk;
 
 my $dbh = t::Utils->setup;
 
-subtest 'lookup' => sub {
+subtest 'grab_job' => sub {
     my $client = Jonk->new($dbh, {functions => [qw/MyWorker/]});
 
-    my $job_id = $client->enqueue('MyWorker', 'arg');
+    my $job_id = $client->insert('MyWorker', 'arg');
     ok $job_id;
 
-    my $job = $client->lookup;
+    my $job = $client->grab_job;
     is $job->arg, 'arg';
     is $job->func, 'MyWorker';
     ok not $client->errstr;
-    $job->dequeue;
-    ok not $client->lookup;
+    $job->completed;
+    ok not $client->grab_job;
 };
 
-subtest 'lookup / no job' => sub {
+subtest 'grab_job / no job' => sub {
     my $client = Jonk->new($dbh, {functions => [qw/MyWorker/]});
-    my $job = $client->lookup;
+    my $job = $client->grab_job;
     ok not $job;
 };
 
-subtest 'lookup / lookup specific job_id' => sub {
+subtest 'grab_job / specific job_id' => sub {
     my $client = Jonk->new($dbh);
 
-    my $job_id = $client->enqueue('MyWorker', 'lookup_job');
+    my $job_id = $client->insert('MyWorker', 'grab_job');
     ok $job_id;
 
-    my $job = $client->lookup($job_id);
-    is $job->arg, 'lookup_job';
+    my $job = $client->grab_job($job_id);
+    is $job->arg, 'grab_job';
     is $job->func, 'MyWorker';
-    $job->dequeue;
-    ok not $client->lookup;
+    $job->completed;
+    ok not $client->grab_job;
 };
 
 t::Utils->cleanup($dbh);
 
-subtest 'lookup / flexible job table name' => sub {
+subtest 'grab_job / flexible job table name' => sub {
     my $dbh = t::Utils->setup("my_job");
     my $client = Jonk->new($dbh, { table_name => "my_job" });
 
-    my $job_id = $client->enqueue('MyWorker', 'arg');
+    my $job_id = $client->insert('MyWorker', 'arg');
     ok $job_id;
 
     my $jonk = Jonk->new($dbh, { table_name => "my_job", functions => [qw/MyWorker/]});
-    my $job = $jonk->lookup;
+    my $job = $jonk->grab_job;
     is $job->arg, 'arg';
     is $job->func, 'MyWorker';
     ok not $jonk->errstr;
-    $job->dequeue;
-    ok not $client->lookup;
+    $job->completed;
+    ok not $client->grab_job;
 
     t::Utils->cleanup($dbh, "my_job");
 };
