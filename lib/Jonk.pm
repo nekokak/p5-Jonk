@@ -14,30 +14,18 @@ sub new {
         Carp::croak('missing job queue database handle.');
     }
 
-    my $table_name = $opts->{table_name} || "job";
-
     bless {
         dbh           => $dbh,
+        retry_delay   => $opts->{retry_delay}   || 60,
+        table_name    => $opts->{table_name}    || 'job',
+        job_find_size => $opts->{job_find_size} || 50,
 
-        insert_query => sprintf('INSERT INTO %s (func, arg, enqueue_time, grabbed_until) VALUES (?,?,?,0)', $table_name),
+        _errstr     => undef,
+
         insert_time_callback => ($opts->{insert_time_callback}||sub{
-            my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
+            my ( $sec, $min, $hour, $mday, $mon, $year, undef, undef, undef ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
-
-        lookup_job_query => sprintf('SELECT * FROM %s WHERE id = ? AND grabbed_until <= ?', $table_name),
-        find_job_query   => sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? ORDER BY id LIMIT %s',
-                             $table_name,
-                             join(', ', map { "'$_'" } @{$opts->{functions}}),
-                             ($opts->{job_find_size}||50),
-                         ),
-        grab_job_query   => sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $table_name),
-
-        purge_job_query  => sprintf('DELETE FROM %s WHERE id = ?', $table_name),
-
-        table_name    => $table_name,
-
-        _errstr       => undef,
     }, $class;
 }
 
@@ -52,7 +40,12 @@ sub insert {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $sth = $self->{dbh}->prepare_cached($self->{insert_query});
+        my $sth = $self->{dbh}->prepare_cached(
+            sprintf(
+                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, retried_cnt, priority) VALUES (?,?,?,0,0,0,0,0)'
+                ,$self->{table_name}
+            )
+        );
         $sth->bind_param(1, $func);
         $sth->bind_param(2, $arg, _bind_param_attr($self->{dbh}));
         $sth->bind_param(3, $self->{insert_time_callback}->());
@@ -79,8 +72,8 @@ sub _bind_param_attr {
     return;
 }
 
-sub grab_job {
-    my ($self, $job_id) = @_;
+sub _grab_job {
+    my ($self, $callback) = @_;
 
     my $job;
     try {
@@ -89,25 +82,11 @@ sub grab_job {
         local $self->{dbh}->{PrintError} = 0;
 
         my $time = time;
-        my $sth;
-        if ($job_id) {
-            $sth = $self->{dbh}->prepare_cached($self->{lookup_job_query});
-            $sth->execute($job_id, $time);
-        } else {
-            $sth = $self->{dbh}->prepare_cached($self->{find_job_query});
-            $sth->execute($time);
-        }
+        my $sth = $callback->(time);
 
         while (my $row = $sth->fetchrow_hashref) {
-            # TODO: grab_a_job method.
-            my $grab_sth = $self->{dbh}->prepare_cached($self->{grab_job_query});
-            $grab_sth->execute((time + 60), $row->{id}, $row->{grabbed_until});
-            $grab_sth->finish;
-
-            if ($grab_sth->rows) {
-                $job = Jonk::Job->new($self => $row);
-                last;
-            }
+            $job = $self->_grab_a_job($row, $time);
+            last;
         }
 
         $sth->finish;
@@ -116,13 +95,61 @@ sub grab_job {
     };
 
     $job;
+
+}
+
+sub _grab_a_job {
+    my ($self, $row, $time) = @_;
+
+    my $sth = $self->{dbh}->prepare_cached(
+        sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $self->{table_name}),
+    );
+    $sth->execute(($time + 60), $row->{id}, $row->{grabbed_until});
+    $sth->finish;
+    $sth->rows ? Jonk::Job->new($self => $row) : undef;
+}
+
+sub lookup_job {
+    my ($self, $job_id) = @_;
+
+    $self->_grab_job(
+        sub {
+            my $time = shift;
+            my $sth = $self->{dbh}->prepare_cached(
+                sprintf('SELECT * FROM %s WHERE id = ? AND grabbed_until <= ?', $self->{table_name})
+            );
+            $sth->execute($job_id, $time);
+            $sth;
+        }
+    );
+}
+
+sub find_job {
+    my ($self, $job_id) = @_;
+
+    $self->_grab_job(
+        sub {
+            my $time = shift;
+            my $sth = $self->{dbh}->prepare_cached(
+                sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? ORDER BY id LIMIT %s',
+                    $self->{table_name},
+                    join(', ', map { "'$_'" } @{$opts->{functions}}),
+                    ($opts->{job_find_size}||50),
+                ),
+            );
+            $sth->execute($time);
+            $sth;
+        }
+    );
 }
 
 sub _completed {
     my ($self, $job_id) = @_;
 
     try {
-        my $sth = $self->{dbh}->prepare_cached($self->{purge_job_query});
+        my $sth = $self->{dbh}->prepare_cached(
+            sprintf('DELETE FROM %s WHERE id = ?', $self->{table_name})
+        );
         $sth->execute($job_id);
         $sth->finish;
         return $sth->rows;
@@ -130,6 +157,23 @@ sub _completed {
         $self->{_errstr} = "can't dequeue job from job queue database: $_";
         return;
     };
+}
+
+sub _failed {
+    my ($self, $job_id) = @_;
+
+    try {
+        my $sth = $self->{dbh}->prepare_cached(
+            sprintf('UPDATE %s SET retried_cnt = retried_cnt + 1 , run_after = ? WHERE id = ?', $self->{table_name})
+        );
+        $sth->execute($self->{retry_delay}, $job_id);
+        $sth->finish;
+        return $sth->rows;
+    } catch {
+        $self->{_errstr} = "can't update job from job queue database: $_";
+        return;
+    };
+
 }
 
 1;
@@ -265,6 +309,10 @@ get most recent error infomation.
         arg           MEDIUMBLOB,
         enqueue_time  DATETIME         NOT NULL,
         grabbed_until int(10) UNSIGNED NOT NULL,
+        run_after     int(10) UNSIGNED NOT NULL DEFAULT 0,
+        retry_cnt     int(10) UNSIGNED NOT NULL DEFAULT 0,
+        retried_cnt   int(10) UNSIGNED NOT NULL DEFAULT 0,
+        priority      int(10) UNSIGNED NOT NULL DEFAULT 0,`
         primary key ( id )
     ) ENGINE=InnoDB
 
@@ -275,7 +323,11 @@ get most recent error infomation.
         func          text,
         arg           text,
         enqueue_time  text,
-        grabbed_until INTEGER UNSIGNED
+        grabbed_until INTEGER UNSIGNED NOT NULL,
+        run_after     INTEGER UNSIGNED NOT NULL DEFAULT 0,
+        retry_cnt     INTEGER UNSIGNED NOT NULL DEFAULT 0,
+        retried_cnt   INTEGER UNSIGNED NOT NULL DEFAULT 0,
+        priority      INTEGER UNSIGNED NOT NULL DEFAULT 0,`
     )
 
 =head2 PostgreSQL
@@ -285,7 +337,11 @@ get most recent error infomation.
         func          TEXT NOT NULL,
         arg           BYTEA,
         enqueue_time  TIMESTAMP NOT NULL,
-        grabbed_until INTEGER NOT NULL
+        grabbed_until INTEGER NOT NULL,
+        run_after     INTEGER NOT NULL DEFAULT 0,
+        retry_cnt     INTEGER NOT NULL DEFAULT 0,
+        retried_cnt   INTEGER NOT NULL DEFAULT 0,
+        priority      INTEGER NOT NULL DEFAULT 0
     )
 
 =head1 SUPPORT
