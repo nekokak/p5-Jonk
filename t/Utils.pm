@@ -10,6 +10,11 @@ BEGIN {
   plan skip_all => 'needs DBD::SQLite for testing' if $@;
 }
 
+sub import {
+    strict->import;
+    warnings->import;
+}
+
 sub _get_schema {
     my $dbh   = shift;
     my $table = shift || "job";

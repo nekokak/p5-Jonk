@@ -16,8 +16,8 @@ my $dbh = t::Utils->setup;
     if ( fork ) {
         my $dbh = t::Utils->setup;
 
-        my $jonk = Jonk->new($dbh, {functions => [qw/MyWorker/]});
-        my $job = $jonk->grab_job();
+        my $jonk = Jonk->new($dbh, {});
+        my $job = $jonk->find_job(+{functions => [qw/MyWorker/]});
         is $job->arg, 'arg1';
 
         wait;
@@ -28,8 +28,8 @@ my $dbh = t::Utils->setup;
 
         sleep 1;
 
-        my $jonk = Jonk->new($dbh, {functions => [qw/MyWorker/]});
-        my $job = $jonk->grab_job();
+        my $jonk = Jonk->new($dbh, {});
+        my $job = $jonk->find_job(+{functions => [qw/MyWorker/]});
 
         is $job->arg, 'arg2';
     }

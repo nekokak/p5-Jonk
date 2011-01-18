@@ -1,5 +1,3 @@
-use strict;
-use warnings;
 use t::Utils;
 use Test::More;
 use DBI;
@@ -19,6 +17,11 @@ subtest 'insert' => sub {
 
     is $row->{arg}, 'arg';
     is $row->{func}, 'MyWorker';
+    is $row->{grabbed_until}, 0;
+    is $row->{run_after}, 0;
+    is $row->{retry_cnt}, 0;
+    is $row->{priority}, 0;
+
     ok not $jonk->errstr;
 };
 
@@ -39,6 +42,8 @@ subtest 'insert / and insert_time_callback' => sub {
     is $row->{arg}, 'arg';
     is $row->{func}, 'MyWorker';
     is $row->{enqueue_time}, $time;
+
+    ok not $jonk->errstr;
 };
 
 subtest 'error handling' => sub {

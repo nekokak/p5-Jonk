@@ -16,7 +16,6 @@ sub new {
 
     bless {
         dbh           => $dbh,
-        retry_delay   => $opts->{retry_delay}   || 60,
         table_name    => $opts->{table_name}    || 'job',
         job_find_size => $opts->{job_find_size} || 50,
 
@@ -42,7 +41,7 @@ sub insert {
 
         my $sth = $self->{dbh}->prepare_cached(
             sprintf(
-                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, retried_cnt, priority) VALUES (?,?,?,0,0,0,0,0)'
+                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,0,0,0)'
                 ,$self->{table_name}
             )
         );
@@ -72,6 +71,21 @@ sub _bind_param_attr {
     return;
 }
 
+sub _server_unixitme {
+    my $dbh = shift;
+
+    my $driver = $dbh->{Driver}{Name};
+    return time if $driver eq 'SQLite';
+
+    my $q;
+    if ( $driver eq 'Pg' ) {
+        $q = "TRUNC(EXTRACT('epoch' from NOW()))";
+    } else {
+        $q = 'UNIX_TIMESTAMP()';
+    }
+    return $dbh->selectrow_array("SELECT $q");
+}
+
 sub _grab_job {
     my ($self, $callback) = @_;
 
@@ -81,7 +95,7 @@ sub _grab_job {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $time = time;
+        my $time = _server_unixitme($self->{dbh});
         my $sth = $callback->(time);
 
         while (my $row = $sth->fetchrow_hashref) {
@@ -125,7 +139,7 @@ sub lookup_job {
 }
 
 sub find_job {
-    my ($self, $job_id) = @_;
+    my ($self, $opts) = @_;
 
     $self->_grab_job(
         sub {
@@ -143,7 +157,7 @@ sub find_job {
     );
 }
 
-sub _completed {
+sub _delete {
     my ($self, $job_id) = @_;
 
     try {
@@ -160,13 +174,14 @@ sub _completed {
 }
 
 sub _failed {
-    my ($self, $job_id) = @_;
+    my ($self, $job_id, $opt) = @_;
 
+    my $retry_delay = $opt->{retry_delay} || 60;
     try {
         my $sth = $self->{dbh}->prepare_cached(
-            sprintf('UPDATE %s SET retried_cnt = retried_cnt + 1 , run_after = ? WHERE id = ?', $self->{table_name})
+            sprintf('UPDATE %s SET retry_cnt = retry_cnt + 1, run_after = ? WHERE id = ?', $self->{table_name})
         );
-        $sth->execute($self->{retry_delay}, $job_id);
+        $sth->execute($retry_delay, $job_id);
         $sth->finish;
         return $sth->rows;
     } catch {
@@ -311,7 +326,6 @@ get most recent error infomation.
         grabbed_until int(10) UNSIGNED NOT NULL,
         run_after     int(10) UNSIGNED NOT NULL DEFAULT 0,
         retry_cnt     int(10) UNSIGNED NOT NULL DEFAULT 0,
-        retried_cnt   int(10) UNSIGNED NOT NULL DEFAULT 0,
         priority      int(10) UNSIGNED NOT NULL DEFAULT 0,`
         primary key ( id )
     ) ENGINE=InnoDB
@@ -326,8 +340,7 @@ get most recent error infomation.
         grabbed_until INTEGER UNSIGNED NOT NULL,
         run_after     INTEGER UNSIGNED NOT NULL DEFAULT 0,
         retry_cnt     INTEGER UNSIGNED NOT NULL DEFAULT 0,
-        retried_cnt   INTEGER UNSIGNED NOT NULL DEFAULT 0,
-        priority      INTEGER UNSIGNED NOT NULL DEFAULT 0,`
+        priority      INTEGER UNSIGNED NOT NULL DEFAULT 0
     )
 
 =head2 PostgreSQL
@@ -340,7 +353,6 @@ get most recent error infomation.
         grabbed_until INTEGER NOT NULL,
         run_after     INTEGER NOT NULL DEFAULT 0,
         retry_cnt     INTEGER NOT NULL DEFAULT 0,
-        retried_cnt   INTEGER NOT NULL DEFAULT 0,
         priority      INTEGER NOT NULL DEFAULT 0
     )
 

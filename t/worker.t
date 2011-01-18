@@ -1,5 +1,3 @@
-use strict;
-use warnings;
 use t::Utils;
 use Test::More;
 use Jonk;
@@ -7,19 +5,27 @@ use Jonk;
 my $dbh = t::Utils->setup;
 
 subtest 'grab_job' => sub {
-    my $client = Jonk->new($dbh, {functions => [qw/MyWorker/]});
+    my $client = Jonk->new($dbh, {});
 
     my $job_id = $client->insert('MyWorker', 'arg');
     ok $job_id;
 
-    my $job = $client->grab_job;
+    my $job = $client->find_job(+{functions => [qw/MyWorker/]});
     is $job->arg, 'arg';
     is $job->func, 'MyWorker';
+    is $job->retry_cnt, 0;
+    is $job->run_after, 0;
+    is $job->priority, 0;
+
     ok not $client->errstr;
+
     $job->completed;
-    ok not $client->grab_job;
+
+    ok not $client->find_job(+{functions => [qw/MyWorker/]});
 };
 
+done_testing;
+__END__
 subtest 'grab_job / no job' => sub {
     my $client = Jonk->new($dbh, {functions => [qw/MyWorker/]});
     my $job = $client->grab_job;
