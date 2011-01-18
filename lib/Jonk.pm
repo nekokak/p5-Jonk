@@ -17,6 +17,7 @@ sub new {
     bless {
         dbh           => $dbh,
         table_name    => $opts->{table_name}    || 'job',
+        functions     => join(', ', map { "'$_'" } @{$opts->{functions}}),
         job_find_size => $opts->{job_find_size} || 50,
 
         _errstr     => undef,
@@ -25,6 +26,7 @@ sub new {
             my ( $sec, $min, $hour, $mday, $mon, $year, undef, undef, undef ) = localtime(time);
             return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
         }),
+
     }, $class;
 }
 
@@ -147,7 +149,7 @@ sub find_job {
             my $sth = $self->{dbh}->prepare_cached(
                 sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? ORDER BY id LIMIT %s',
                     $self->{table_name},
-                    join(', ', map { "'$_'" } @{$opts->{functions}}),
+                    $self->{functions},
                     ($opts->{job_find_size}||50),
                 ),
             );

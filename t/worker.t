@@ -5,12 +5,12 @@ use Jonk;
 my $dbh = t::Utils->setup;
 
 subtest 'grab_job' => sub {
-    my $client = Jonk->new($dbh, {});
+    my $client = Jonk->new($dbh, {functions => [qw/MyWorker/]});
 
     my $job_id = $client->insert('MyWorker', 'arg');
     ok $job_id;
 
-    my $job = $client->find_job(+{functions => [qw/MyWorker/]});
+    my $job = $client->find_job();
     is $job->arg, 'arg';
     is $job->func, 'MyWorker';
     is $job->retry_cnt, 0;
@@ -21,7 +21,7 @@ subtest 'grab_job' => sub {
 
     $job->completed;
 
-    ok not $client->find_job(+{functions => [qw/MyWorker/]});
+    ok not $client->find_job();
 };
 
 done_testing;
