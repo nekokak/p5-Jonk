@@ -54,6 +54,22 @@ subtest 'error handling' => sub {
     like $jonk->errstr, qr/can't insert for job queue database:/;
 };
 
+subtest 'insert / set priority' => sub {
+    my $jonk = Jonk->new($dbh);
+
+    my $job_id = $jonk->insert('MyWorker', 'arg', { priority => 10 });
+    ok $job_id;
+
+    my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
+    $sth->execute($job_id);
+    my $row = $sth->fetchrow_hashref;
+
+    is $row->{arg}, 'arg';
+    is $row->{func}, 'MyWorker';
+    is $row->{priority}, 10;
+    ok not $jonk->errstr;
+};
+
 t::Utils->cleanup($dbh);
 
 subtest 'insert / flexible job table name' => sub {

@@ -14,6 +14,8 @@ sub new {
         Carp::croak('missing job queue database handle.');
     }
 
+    # functions check
+
     bless {
         dbh           => $dbh,
         table_name    => $opts->{table_name}    || 'job',
@@ -33,7 +35,7 @@ sub new {
 sub errstr {$_[0]->{_errstr}}
 
 sub insert {
-    my ($self, $func, $arg) = @_;
+    my ($self, $func, $arg, $opt) = @_;
 
     my $job_id;
     try {
@@ -43,13 +45,14 @@ sub insert {
 
         my $sth = $self->{dbh}->prepare_cached(
             sprintf(
-                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,0,0,0)'
+                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,0,0,?)'
                 ,$self->{table_name}
             )
         );
         $sth->bind_param(1, $func);
         $sth->bind_param(2, $arg, _bind_param_attr($self->{dbh}));
         $sth->bind_param(3, $self->{insert_time_callback}->());
+        $sth->bind_param(4, $opt->{priority}||0);
         $sth->execute();
 
         $job_id = $self->{dbh}->last_insert_id("","",$self->{table_name},"");
@@ -98,7 +101,7 @@ sub _grab_job {
         local $self->{dbh}->{PrintError} = 0;
 
         my $time = _server_unixitme($self->{dbh});
-        my $sth = $callback->(time);
+        my $sth = $callback->($time);
 
         while (my $row = $sth->fetchrow_hashref) {
             $job = $self->_grab_a_job($row, $time);
@@ -121,8 +124,9 @@ sub _grab_a_job {
         sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $self->{table_name}),
     );
     $sth->execute(($time + 60), $row->{id}, $row->{grabbed_until});
+    my $grabbed = $sth->rows;
     $sth->finish;
-    $sth->rows ? Jonk::Job->new($self => $row) : undef;
+    $grabbed ? Jonk::Job->new($self => $row) : undef;
 }
 
 sub lookup_job {
