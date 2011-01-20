@@ -14,12 +14,12 @@ sub new {
         Carp::croak('missing job queue database handle.');
     }
 
-    # functions check
 
     bless {
         dbh           => $dbh,
         table_name    => $opts->{table_name}    || 'job',
-        functions     => join(', ', map { "'$_'" } @{$opts->{functions}}),
+        functions     => $opts->{functions},
+        find_funcs    => join(', ', map { "'$_'" } keys %{$opts->{functions}}),
         job_find_size => $opts->{job_find_size} || 50,
 
         default_grab_for => $opts->{default_grab_for}||(60*60),
@@ -121,13 +121,13 @@ sub _grab_job {
 }
 
 sub _grab_a_job {
-    my ($self, $row, $time, $opts) = @_;
+    my ($self, $row, $time) = @_;
 
     my $sth = $self->{dbh}->prepare_cached(
         sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $self->{table_name}),
     );
     $sth->execute(
-        ($time + ($opts->{grab_for} || $self->{default_grab_for})),
+        ($time + ($self->{functions}->{$row->{func}}->{grab_for} || $self->{default_grab_for})),
         $row->{id},
         $row->{grabbed_until}
     );
@@ -137,7 +137,7 @@ sub _grab_a_job {
 }
 
 sub lookup_job {
-    my ($self, $job_id, $opts) = @_;
+    my ($self, $job_id) = @_;
 
     $self->_grab_job(
         sub {
@@ -147,14 +147,14 @@ sub lookup_job {
             );
             $sth->execute($job_id, $time, $time);
             $sth;
-        }, $opts
+        }
     );
 }
 
 sub find_job {
     my ($self, $opts) = @_;
 
-    unless ($self->{functions}) {
+    unless ($self->{find_funcs}) {
         Carp::croak('missin find_job functions.');
     }
 
@@ -164,13 +164,13 @@ sub find_job {
             my $sth = $self->{dbh}->prepare_cached(
                 sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? AND run_after <= ? ORDER BY priority DESC LIMIT %s',
                     $self->{table_name},
-                    $self->{functions},
+                    $self->{find_funcs},
                     ($opts->{job_find_size}||50),
                 ),
             );
             $sth->execute($time, $time);
             $sth;
-        }, $opts
+        }
     );
 }
 
@@ -221,7 +221,7 @@ Jonk - simple job tank manager.
     use DBI; 
     use Jonk;
     my $dbh = DBI->connect(...);
-    my $jonk = Jonk->new($dbh, {functions => ['MyWorker']});
+    my $jonk = Jonk->new($dbh, {functions => {MyWorker => {}}});
     # insert job
     {
         $jonk->insert('MyWorker', 'arg');
