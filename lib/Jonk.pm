@@ -22,6 +22,8 @@ sub new {
         functions     => join(', ', map { "'$_'" } @{$opts->{functions}}),
         job_find_size => $opts->{job_find_size} || 50,
 
+        default_grab_for => $opts->{default_grab_for}||(60*60),
+
         _errstr     => undef,
 
         insert_time_callback => ($opts->{insert_time_callback}||sub{
@@ -45,14 +47,15 @@ sub insert {
 
         my $sth = $self->{dbh}->prepare_cached(
             sprintf(
-                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,0,0,?)'
+                'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,?,0,?)'
                 ,$self->{table_name}
             )
         );
         $sth->bind_param(1, $func);
         $sth->bind_param(2, $arg, _bind_param_attr($self->{dbh}));
         $sth->bind_param(3, $self->{insert_time_callback}->());
-        $sth->bind_param(4, $opt->{priority}||0);
+        $sth->bind_param(4, $opt->{run_after}||0);
+        $sth->bind_param(5, $opt->{priority}||0);
         $sth->execute();
 
         $job_id = $self->{dbh}->last_insert_id("","",$self->{table_name},"");
@@ -92,7 +95,7 @@ sub _server_unixitme {
 }
 
 sub _grab_job {
-    my ($self, $callback) = @_;
+    my ($self, $callback, $opt) = @_;
 
     my $job;
     try {
@@ -104,7 +107,7 @@ sub _grab_job {
         my $sth = $callback->($time);
 
         while (my $row = $sth->fetchrow_hashref) {
-            $job = $self->_grab_a_job($row, $time);
+            $job = $self->_grab_a_job($row, $time, $opt);
             last;
         }
 
@@ -118,48 +121,56 @@ sub _grab_job {
 }
 
 sub _grab_a_job {
-    my ($self, $row, $time) = @_;
+    my ($self, $row, $time, $opts) = @_;
 
     my $sth = $self->{dbh}->prepare_cached(
         sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $self->{table_name}),
     );
-    $sth->execute(($time + 60), $row->{id}, $row->{grabbed_until});
+    $sth->execute(
+        ($time + ($opts->{grab_for} || $self->{default_grab_for})),
+        $row->{id},
+        $row->{grabbed_until}
+    );
     my $grabbed = $sth->rows;
     $sth->finish;
     $grabbed ? Jonk::Job->new($self => $row) : undef;
 }
 
 sub lookup_job {
-    my ($self, $job_id) = @_;
+    my ($self, $job_id, $opts) = @_;
 
     $self->_grab_job(
         sub {
             my $time = shift;
             my $sth = $self->{dbh}->prepare_cached(
-                sprintf('SELECT * FROM %s WHERE id = ? AND grabbed_until <= ?', $self->{table_name})
+                sprintf('SELECT * FROM %s WHERE id = ? AND grabbed_until <= ? AND run_after <= ?', $self->{table_name})
             );
-            $sth->execute($job_id, $time);
+            $sth->execute($job_id, $time, $time);
             $sth;
-        }
+        }, $opts
     );
 }
 
 sub find_job {
     my ($self, $opts) = @_;
 
+    unless ($self->{functions}) {
+        Carp::croak('missin find_job functions.');
+    }
+
     $self->_grab_job(
         sub {
             my $time = shift;
             my $sth = $self->{dbh}->prepare_cached(
-                sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? ORDER BY id LIMIT %s',
+                sprintf('SELECT * FROM %s WHERE func IN (%s) AND grabbed_until <= ? AND run_after <= ? ORDER BY priority DESC LIMIT %s',
                     $self->{table_name},
                     $self->{functions},
                     ($opts->{job_find_size}||50),
                 ),
             );
-            $sth->execute($time);
+            $sth->execute($time, $time);
             $sth;
-        }
+        }, $opts
     );
 }
 
