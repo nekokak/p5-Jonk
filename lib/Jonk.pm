@@ -14,17 +14,30 @@ sub new {
         Carp::croak('missing job queue database handle.');
     }
 
+    my $default_grab_for = $opts->{default_grab_for}|| 60*60;
+    my $funcs = +{};
+    my $functions = $opts->{functions}||[];
+    for (my $i = 0; $i < @$functions; $i++) {
+        my $func = $functions->[$i];
+
+        my $value;
+
+        if    (not defined $functions->[$i+1]) {$i++                       }
+        elsif (ref $functions->[$i+1])         {$value = $functions->[++$i]}
+
+        $value ||= +{grab_for => $default_grab_for};
+
+        $funcs->{$func} = $value;
+    }
 
     bless {
         dbh           => $dbh,
         table_name    => $opts->{table_name}    || 'job',
-        functions     => $opts->{functions},
-        find_funcs    => join(', ', map { "'$_'" } keys %{$opts->{functions}}),
+        functions     => $funcs,
+        find_funcs    => join(', ', map { "'$_'" } keys %{$funcs}),
         job_find_size => $opts->{job_find_size} || 50,
 
-        default_grab_for => $opts->{default_grab_for}||(60*60),
-
-        _errstr     => undef,
+        _errstr       => undef,
 
         insert_time_callback => ($opts->{insert_time_callback}||sub{
             my ( $sec, $min, $hour, $mday, $mon, $year, undef, undef, undef ) = localtime(time);
@@ -127,7 +140,7 @@ sub _grab_a_job {
         sprintf('UPDATE %s SET grabbed_until = ? WHERE id = ? AND grabbed_until = ?', $self->{table_name}),
     );
     $sth->execute(
-        ($time + ($self->{functions}->{$row->{func}}->{grab_for} || $self->{default_grab_for})),
+        ($time + ($self->{functions}->{$row->{func}}->{grab_for})),
         $row->{id},
         $row->{grabbed_until}
     );
