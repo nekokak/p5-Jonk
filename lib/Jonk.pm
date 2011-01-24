@@ -92,7 +92,7 @@ sub _bind_param_attr {
     return;
 }
 
-sub _server_unixitme {
+sub _server_unixitime {
     my $dbh = shift;
 
     my $driver = $dbh->{Driver}{Name};
@@ -116,7 +116,7 @@ sub _grab_job {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $time = _server_unixitme($self->{dbh});
+        my $time = _server_unixitime($self->{dbh});
         my $sth = $callback->($time);
 
         while (my $row = $sth->fetchrow_hashref) {
@@ -206,10 +206,10 @@ sub _delete {
 sub _failed {
     my ($self, $job_id, $opt) = @_;
 
-    my $retry_delay = $opt->{retry_delay} || 60;
+    my $retry_delay = _server_unixitime($self->{dbh}) + ($opt->{retry_delay} || 60);
     try {
         my $sth = $self->{dbh}->prepare_cached(
-            sprintf('UPDATE %s SET retry_cnt = retry_cnt + 1, run_after = ? WHERE id = ?', $self->{table_name})
+            sprintf('UPDATE %s SET retry_cnt = retry_cnt + 1, run_after = ?, grabbed_until = 0 WHERE id = ?', $self->{table_name})
         );
         $sth->execute($retry_delay, $job_id);
         $sth->finish;
@@ -218,7 +218,6 @@ sub _failed {
         $self->{_errstr} = "can't update job from job queue database: $_";
         return;
     };
-
 }
 
 1;
@@ -234,23 +233,23 @@ Jonk - simple job tank manager.
     use DBI; 
     use Jonk;
     my $dbh = DBI->connect(...);
-    my $jonk = Jonk->new($dbh, {functions => {MyWorker => {}}});
+    my $jonk = Jonk->new($dbh, {functions => [qw/MyWorker/]});
     # insert job
     {
         $jonk->insert('MyWorker', 'arg');
     }
 
-    # dequeue job
+    # e
     {
-        my $job = $jonk->lookup;
-        print $job->{func}; # MyWorker
-        print $job->{arg};  # arg
-        $job->dequeue;
+        my $job = $jonk->find_job;
+        print $job->func; # MyWorker
+        print $job->arg;  # arg
+        $job->completed;
     }
 
 =head1 DESCRIPTION
 
-Jonk is simple job tanking system.
+Jonk is simple job queue manager system
 
 Job is saved and taken out. Besides, nothing is done.
 
@@ -258,7 +257,7 @@ You may use Jonk to make original Job Queuing System.
 
 =head1 METHODS
 
-=head2 my $jonk = Jonk::Worker->new($dbh, [$options]);
+=head2 my $jonk = Jonk::Worker->new($dbh, [\%options]);
 
 Creates a new Jonk object, and returns the object.
 
@@ -288,7 +287,7 @@ Default 50.
 
 =back
 
-=head2 my $job_id = $jonk->enqueue($func, $arg);
+=head2 my $job_id = $jonk->insert($func, $arg);
 
 enqueue a job to a database.
 returns job.id.
@@ -309,27 +308,27 @@ Please pass data that does serialize if it is necessary.
 
 =back
 
-=head2 my $job_hash_ref = $jonk->lookup([$job_id]);
+=head2 my $job = $jonk->lookup_job($job_id);
 
 lookup a job from a database.
 
-returns job hashref data.
-
-Please do deserialize if it is necessary. 
-
-$job_id is optional argument.
+returns Jonk::Job object.
 
 =over 4
 
-=item * $job_id (optional)
+=item * $job_id
 
 lookup specific $job_id's job.
 
-=item * $options->{enqueue_time_callback}
+=back
 
-specific enqueue_time creation callback.
+=head2 my $job = $jonk->find_job(\%opts);
 
-Default local time create.
+=over 4
+
+=item * $opts->{job_find_size}
+
+find job limit size.
 
 =back
 
@@ -385,6 +384,12 @@ get most recent error infomation.
         retry_cnt     INTEGER NOT NULL DEFAULT 0,
         priority      INTEGER NOT NULL DEFAULT 0
     )
+
+=head1 SEE ALSO
+
+L<Qudo>
+
+L<TheSchwartz>
 
 =head1 SUPPORT
 
