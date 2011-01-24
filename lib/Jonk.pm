@@ -121,7 +121,7 @@ sub _grab_job {
 
         while (my $row = $sth->fetchrow_hashref) {
             $job = $self->_grab_a_job($row, $time, $opt);
-            last if $job;
+            last;
         }
 
         $sth->finish;
