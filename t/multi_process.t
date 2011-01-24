@@ -21,6 +21,8 @@ my $dbh = t::Utils->setup;
         is $job->arg, 'arg1';
 
         wait;
+
+        $job->completed;
     }
     else {
         # child
@@ -32,6 +34,7 @@ my $dbh = t::Utils->setup;
         my $job = $jonk->find_job();
 
         is $job->arg, 'arg2';
+        $job->completed;
     }
 
 done_testing;

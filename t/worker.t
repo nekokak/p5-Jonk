@@ -112,6 +112,8 @@ subtest 'find_job / with grabbed_until' => sub {
         $re_grabbed_job->completed;
 
         ok not $client->find_job();
+
+        $job->completed;
     }
 
     {
@@ -143,6 +145,8 @@ subtest 'find_job / with grabbed_until' => sub {
         $re_grabbed_job->completed;
 
         ok not $client->find_job();
+
+        $job->completed;
     }
 };
 
