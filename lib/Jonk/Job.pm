@@ -59,17 +59,7 @@ sub is_completed { $_[0]->{_completed} }
 sub is_failed    { $_[0]->{_failed}    }
 sub is_aborted   { $_[0]->{_aborted}   }
 
-sub DESTROY {
-    my $self = shift;
-    unless ($self->is_completed or $self->is_aborted or $self->is_failed) {
-        Carp::cluck "job is not (complete|fail|abor)ed. this job auto failed.";
-        $self->failed;
-    }
-}
-
 1;
-
-__END__
 
 __END__
 
