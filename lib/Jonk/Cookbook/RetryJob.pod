@@ -27,7 +27,7 @@ Jonk::Cookbook::RetryJob - retry job with wait few minitus
             } else {
                 $job->failed(
                     {
-                        retry_delay => ($job->retry_cnt*30),
+                        retry_delay => ($job->retry_cnt*30), # wait for (retry_cnt * 30sec)
                     }
                 );
             }
