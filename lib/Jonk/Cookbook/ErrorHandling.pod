@@ -10,11 +10,11 @@ enqueue script:
     use strict;
     use warnings;
     use DBI;
-    use Jonk::Client;
+    use Jonk;
     
     my $dbh = DBI->connect('dbi:mysql:test','user','pass');
-    my $jonk = Jonk::Client->new($dbh);
-    my $job_id = $jonk->enqueue('worker_key','job_data_here');
+    my $jonk = Jonk->new($dbh);
+    my $job_id = $jonk->insert('worker_key','job_data_here');
     if ($jonk->errstr) {
         die $jonk->errstr;
     }
@@ -25,14 +25,14 @@ worker script:
     use strict;
     use warnings;
     use DBI;
-    use Jonk::Worker;
+    use Jonk;
     use Your::Worker;
     
     my $dbh = DBI->connect('dbi:mysql:test','user','pass');
-    my $jonk = Jonk::Worker->new($dbh => {functions => [qw/worker_key/]});
+    my $jonk = Jonk->new($dbh => {functions => [qw/worker_key/]});
     
     while (1) {
-        my $job = $jonk->dequeue;
+        my $job = $jonk->find_job;
         if ($jonk->errstr) {
             die $jonk->errstr;
         }
@@ -44,3 +44,4 @@ worker script:
     }
 
 =cut
+

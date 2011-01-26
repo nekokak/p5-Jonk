@@ -8,15 +8,13 @@ Jonk::Cookbook::DequeueSpecificJob - dequeue specific job.
     use strict;
     use warnings;
     use DBI;
-    use Jonk::Client;
-    use Jonk::Worker;
+    use Jonk;
     
     my $dbh = DBI->connect('dbi:mysql:test','user','pass');
     
-    my $client = Jonk::Client->new($dbh);
-    my $job_id = $client->enqueue('worker_key','job_data_here');
-    
-    my $worker = Jonk::Worker->new($dbh => {functions => [qw/worker_key/]});
-    my $job = $worker->dequeue($job_id);
+    my $jonk = Jonk->new($dbh, {functions => [qw/worker_key/]});
+    my $job_id = $jonk->insert('worker_key','job_data_here');
+
+    my $job = $jonk->lookup_job($job_id);
 
 =cut

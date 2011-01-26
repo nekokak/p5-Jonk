@@ -11,7 +11,7 @@ prefork worker script:
     use warnings;
     use Parallel::Prefork;
     use DBI;
-    use Jonk::Worker;
+    use Jonk;
     use Your::Worker;
 
     my $pm = Parallel::Prefork->new({
@@ -26,10 +26,10 @@ prefork worker script:
         $pm->start and next;
 
         my $dbh = DBI->connect('dbi:mysql:test','user','pass');
-        my $jonk = Jonk::Worker->new($dbh => {functions => [qw/worker_key/]});
+        my $jonk = Jonk->new($dbh => {functions => [qw/worker_key/]});
 
         while (1) {
-            if (my $job = $jonk->dequeue) {
+            if (my $job = $jonk->find_job) {
                 Your::Worker->work($job);
             } else {
                 sleep(3); # wait for 3 sec.
