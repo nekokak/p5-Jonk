@@ -14,7 +14,9 @@ my $mysql = Test::mysqld->new
     sub t::Utils::setup {
         my ($class, $table) = @_;
         my $dbh = DBI->connect($mysql->dsn( dbname => "test" ));
-        $dbh->do(t::Utils::_get_schema($dbh, $table));
+        my $schema = t::Utils::_get_schema($dbh, $table);
+        $schema =~ s/CREATE TABLE/CREATE TABLE IF NOT EXISTS/;
+        $dbh->do($schema);
         $dbh;
     }
 }

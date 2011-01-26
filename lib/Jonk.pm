@@ -239,7 +239,7 @@ Jonk - simple job tank manager.
         $jonk->insert('MyWorker', 'arg');
     }
 
-    # e
+    # execute job
     {
         my $job = $jonk->find_job;
         print $job->func; # MyWorker
@@ -348,14 +348,14 @@ get most recent error infomation.
 =head2 MySQL
 
     CREATE TABLE job (
-        id            int(10) unsigned NOT NULL auto_increment,
+        id            int(10) UNSIGNED NOT NULL auto_increment,
         func          varchar(255)     NOT NULL,
         arg           MEDIUMBLOB,
         enqueue_time  DATETIME         NOT NULL,
         grabbed_until int(10) UNSIGNED NOT NULL,
         run_after     int(10) UNSIGNED NOT NULL DEFAULT 0,
         retry_cnt     int(10) UNSIGNED NOT NULL DEFAULT 0,
-        priority      int(10) UNSIGNED NOT NULL DEFAULT 0,`
+        priority      int(10) UNSIGNED NOT NULL DEFAULT 0,
         primary key ( id )
     ) ENGINE=InnoDB
 
