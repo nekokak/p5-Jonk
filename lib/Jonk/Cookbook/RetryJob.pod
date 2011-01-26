@@ -13,7 +13,7 @@ Jonk::Cookbook::RetryJob - retry job with wait few minitus
     
     my $dbh = DBI->connect('dbi:mysql:test','user','pass');
     my $jonk = Jonk->new($dbh);
-    my $job_id = $jonk->enqueue('worker_key','job_data_here');
+    my $job_id = $jonk->insert('worker_key','job_data_here');
 
     while (1) {
         my $job = $jonk->find_job;
