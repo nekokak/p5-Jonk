@@ -12,4 +12,6 @@ L<Jonk::Cookbook::DequeueSpecificJob> - dequeue specific job.
 
 L<Jonk::Cookbook::ErrorHandling> - error handling enqueue and dequeue.
 
+L<Jonk::Cookbook::RetryJob> - retry job with wait few minitus.
+
 =cut
