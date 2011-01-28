@@ -23,6 +23,8 @@ my $dbh = t::Utils->setup;
         wait;
 
         $job->completed;
+
+        done_testing;
     }
     else {
         # child
@@ -37,4 +39,3 @@ my $dbh = t::Utils->setup;
         $job->completed;
     }
 
-done_testing;
