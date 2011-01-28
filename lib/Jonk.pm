@@ -5,7 +5,7 @@ use Jonk::Job;
 use Try::Tiny;
 use Carp ();
 
-our $VERSION = '0.10';
+our $VERSION = '0.10_01';
 
 sub new {
     my ($class, $dbh, $opts) = @_;
