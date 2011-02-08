@@ -25,27 +25,6 @@ subtest 'insert' => sub {
     ok not $jonk->errstr;
 };
 
-subtest 'insert / and insert_time_callback' => sub {
-    my $time;
-    my $jonk = Jonk->new($dbh,+{insert_time_callback => sub {
-        my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = localtime(time);
-        $time = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
-    }});
-
-    my $job_id = $jonk->insert('MyWorker', 'arg');
-    ok $job_id;
-
-    my $sth = $dbh->prepare('SELECT * FROM job WHERE id = ?');
-    $sth->execute($job_id);
-    my $row = $sth->fetchrow_hashref;
-
-    is $row->{arg}, 'arg';
-    is $row->{func}, 'MyWorker';
-    is $row->{enqueue_time}, $time;
-
-    ok not $jonk->errstr;
-};
-
 subtest 'error handling' => sub {
     my $jonk = Jonk->new($dbh, +{table_name => 'jonk_job'});
 

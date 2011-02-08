@@ -27,11 +27,6 @@ sub new {
 
         _errstr       => undef,
 
-        insert_time_callback => ($opts->{insert_time_callback}||sub{
-            my ( $sec, $min, $hour, $mday, $mon, $year, undef, undef, undef ) = localtime(time);
-            return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
-        }),
-
         insert_query => sprintf(
             'INSERT INTO %s (func, arg, enqueue_time, grabbed_until, run_after, retry_cnt, priority) VALUES (?,?,?,0,?,0,?)'
             ,$table_name
@@ -105,11 +100,11 @@ sub insert {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
-        my $serializer = $self->{functions}->{$func}->{serializer} || sub {$_[0]};
+        my $serializer = $self->{functions}->{$func}->{serializer} ||= sub {$_[0]};
         my $sth = $self->{dbh}->prepare_cached($self->{insert_query});
         $sth->bind_param(1, $func);
         $sth->bind_param(2, $serializer->($arg), _bind_param_attr($self->{driver}));
-        $sth->bind_param(3, $self->{insert_time_callback}->());
+        $sth->bind_param(3, time());
         $sth->bind_param(4, $opt->{run_after}||0);
         $sth->bind_param(5, $opt->{priority} ||0);
         $sth->execute();
@@ -395,7 +390,7 @@ get most recent error infomation.
         id            int(10) UNSIGNED NOT NULL auto_increment,
         func          varchar(255)     NOT NULL,
         arg           MEDIUMBLOB,
-        enqueue_time  DATETIME         NOT NULL,
+        enqueue_time  INTEGER UNSIGNED,
         grabbed_until int(10) UNSIGNED NOT NULL,
         run_after     int(10) UNSIGNED NOT NULL DEFAULT 0,
         retry_cnt     int(10) UNSIGNED NOT NULL DEFAULT 0,
@@ -409,7 +404,7 @@ get most recent error infomation.
         id            INTEGER PRIMARY KEY ,
         func          text,
         arg           text,
-        enqueue_time  text,
+        enqueue_time  INTEGER UNSIGNED,
         grabbed_until INTEGER UNSIGNED NOT NULL,
         run_after     INTEGER UNSIGNED NOT NULL DEFAULT 0,
         retry_cnt     INTEGER UNSIGNED NOT NULL DEFAULT 0,
@@ -422,7 +417,7 @@ get most recent error infomation.
         id            SERIAL PRIMARY KEY,
         func          TEXT NOT NULL,
         arg           BYTEA,
-        enqueue_time  TIMESTAMP NOT NULL,
+        enqueue_time  INTEGER,
         grabbed_until INTEGER NOT NULL,
         run_after     INTEGER NOT NULL DEFAULT 0,
         retry_cnt     INTEGER NOT NULL DEFAULT 0,
