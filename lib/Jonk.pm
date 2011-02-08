@@ -194,7 +194,7 @@ sub lookup_job {
 }
 
 sub find_job {
-    my ($self, $opts) = @_;
+    my $self = shift;
 
     unless ($self->{has_func}) {
         Carp::croak('missin find_job functions.');
@@ -372,15 +372,9 @@ lookup specific $job_id's job.
 
 =back
 
-=head2 my $job = $jonk->find_job(\%opts);
+=head2 my $job = $jonk->find_job();
 
-=over 4
-
-=item * $opts->{job_find_size}
-
-find job limit size.
-
-=back
+get job from database by sorted priority descending order.
 
 =head2 $jonk->errstr;
 

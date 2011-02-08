@@ -142,6 +142,12 @@ job retry delay sec.
 
 Default 60 sec.
 
+=item * $options->{priority}
+
+job priority number.
+
+Default 0.
+
 =back
 
 =head2 $job->aborted
@@ -149,9 +155,23 @@ Default 60 sec.
 aborted job.
 set error message and delete job data from database.
 
+=head2 $job->is_completed
+
+determinate job completed or not.
+
+when $job->completed is called, it is set true.
+
 =head2 $job->is_failed
 
+determinate job failed or not.
+
+when $job->failed is called, it is set true.
+
 =head2 $job->is_aborted
+
+determinate job aborted or not.
+
+when $job->aborted is called, it is set true.
 
 =cut
 

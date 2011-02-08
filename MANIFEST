@@ -13,9 +13,9 @@ inc/Module/Install/WriteAll.pm
 lib/Jonk.pm
 lib/Jonk/Cookbook.pod
 lib/Jonk/Cookbook/Basic.pod
-lib/Jonk/Cookbook/DequeueSpecificJob.pod
 lib/Jonk/Cookbook/ErrorHandling.pod
 lib/Jonk/Cookbook/ForkModel.pod
+lib/Jonk/Cookbook/LookupSpecificJob.pod
 lib/Jonk/Cookbook/RetryJob.pod
 lib/Jonk/Job.pm
 Makefile.PL

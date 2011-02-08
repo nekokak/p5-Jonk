@@ -4,6 +4,8 @@ Jonk::Cookbook::RetryJob - retry job with wait few minitus
 
 =head1 USAGE
 
+retry wait few minitus:
+
     #! perl
     use strict;
     use warnings;
@@ -34,6 +36,39 @@ Jonk::Cookbook::RetryJob - retry job with wait few minitus
         }
 
         sleep(3); # wait for 3 sec.
+    }
+
+retry and set new priority:
+
+
+    #! perl
+    use strict;
+    use warnings;
+    use DBI;
+    use Jonk
+    use Your::Worker;
+    
+    my $dbh = DBI->connect('dbi:mysql:test','user','pass');
+    my $jonk = Jonk->new($dbh, {functions => [qw/worker_key/]});
+    my $job_id = $jonk->insert('worker_key','job_data_here');
+
+    while (1) {
+        my $job = $jonk->find_job;
+
+        eval {
+            Your::Worker->work($job);
+        };
+        if ($@) {
+            if ($job->retry_cnt >= 5) {
+                $job->aborted();
+            } else {
+                $job->failed(
+                    {
+                        priority => $job->priority + 1,
+                    }
+                );
+            }
+        }
     }
 
 =cut
