@@ -48,7 +48,11 @@ sub aborted {
 
 sub id            { $_[0]->{job}->{id}            }
 sub func          { $_[0]->{job}->{func}          }
-sub arg           { $_[0]->{job}->{arg}           }
+sub raw_arg       { $_[0]->{job}->{arg}           }
+sub arg {
+    my $self = shift;
+    $self->{_jonk}->{functions}->{$self->func}->{deserializer}->($self->{job}->{arg});
+}
 sub enqueue_time  { $_[0]->{job}->{enqueue_time}  }
 sub grabbed_until { $_[0]->{job}->{grabbed_until} }
 sub retry_cnt     { $_[0]->{job}->{retry_cnt}     }

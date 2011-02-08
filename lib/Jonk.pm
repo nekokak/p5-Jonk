@@ -23,6 +23,7 @@ sub new {
         table_name    => $table_name,
         functions     => $functions,
         driver        => $driver,
+        has_func      => scalar(keys %{$functions}) ? 1 : 0,
 
         _errstr       => undef,
 
@@ -68,7 +69,9 @@ sub _parse_functions {
         if    (not defined $functions->[$i+1]) {$i++                       }
         elsif (ref $functions->[$i+1])         {$value = $functions->[++$i]}
 
-        $value ||= +{grab_for => $default_grab_for};
+        $value->{grab_for}     ||= $default_grab_for;
+        $value->{serializer}   ||= ($opts->{default_serializer}   || sub {$_[0]});
+        $value->{deserializer} ||= ($opts->{default_deserializer} || sub {$_[0]});
 
         $funcs->{$func} = $value;
     }
@@ -102,9 +105,10 @@ sub insert {
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
 
+        my $serializer = $self->{functions}->{$func}->{serializer} || sub {$_[0]};
         my $sth = $self->{dbh}->prepare_cached($self->{insert_query});
         $sth->bind_param(1, $func);
-        $sth->bind_param(2, $arg, _bind_param_attr($self->{driver}));
+        $sth->bind_param(2, $serializer->($arg), _bind_param_attr($self->{driver}));
         $sth->bind_param(3, $self->{insert_time_callback}->());
         $sth->bind_param(4, $opt->{run_after}||0);
         $sth->bind_param(5, $opt->{priority} ||0);
@@ -192,7 +196,7 @@ sub lookup_job {
 sub find_job {
     my ($self, $opts) = @_;
 
-    unless (keys %{$self->{functions}}) {
+    unless ($self->{has_func}) {
         Carp::croak('missin find_job functions.');
     }
 
@@ -223,7 +227,7 @@ sub _delete {
 sub _failed {
     my ($self, $job_id, $opt) = @_;
 
-    my $retry_delay = $self->_server_unixitime + ($opt->{retry_delay} || 60);
+    my $retry_delay = $self->_server_unixitime + (defined($opt->{retry_delay}) ? $opt->{retry_delay} : 60);
     try {
         my $sth = $self->{dbh}->prepare_cached($self->{failed_query});
         $sth->execute($retry_delay, $job_id);
@@ -288,6 +292,26 @@ $dbh is database handle.
 
 Key word of job which this Jonk instance looks for.
 
+=over 4
+
+=item * $options->{functions} = [qw/worker_key worker_key2/]
+
+can set *worker_key* at arrayref.
+
+=item * $options->{functions} = ['worker_key' => {grab_for => 5}],
+
+can set worker_key's grab_for setting by hash-ref.
+
+=item * $options->{functions} = ['worker_key' => {serializer => \&serialize_code, deserializer => \&deserialize_code}],
+
+can set worker_key's (de)serializer code setting by hash-ref.
+
+=item * $options->{functions} = ['worker_key' => {serializer => \&serialize_code, deserializer => \&deserialize_code}, 'worker_key2'],
+
+can mix worker settings.
+
+=back
+
 =item * $options->{table_name}
 
 specific job table name.
@@ -299,6 +323,18 @@ Default job table name is `job`.
 specific lookup job record size.
 
 Default 50.
+
+=item * $options->{default_serializer}
+
+global serializer setting.
+
+=item * $options->{default_deserializer}
+
+global deserializer setting.
+
+=item * $options->{default_grab_for}
+
+global grab_for setting.
 
 =back
 
@@ -316,10 +352,6 @@ specific your worker funcname.
 =item * $arg
 
 job argument data.
-
-serialize is not done in Jonk. 
-
-Please pass data that does serialize if it is necessary. 
 
 =back
 
