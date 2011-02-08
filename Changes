@@ -5,6 +5,7 @@ Revision history for Perl extension Jonk
         - refactoring code.
         - can set (de)serializer each func or global.
         - can set priority by $job->failed.
+        - enqueue_time change format to unixtime.
 
 0.10_01
    2011-01-24
