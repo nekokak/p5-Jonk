@@ -48,7 +48,7 @@ sub new {
 
         delete_query => sprintf('DELETE FROM %s WHERE id = ?', $table_name),
 
-        failed_query => sprintf('UPDATE %s SET retry_cnt = retry_cnt + 1, run_after = ?, grabbed_until = 0 WHERE id = ?', $table_name),
+        failed_query => sprintf('UPDATE %s SET retry_cnt = retry_cnt + 1, run_after = ?, grabbed_until = 0, priority = ? WHERE id = ?', $table_name),
 
         unixtime_query => _settled_unixtime_query($driver),
 
@@ -228,12 +228,15 @@ sub _failed {
     my ($self, $job_id, $opt) = @_;
 
     my $retry_delay = $self->_server_unixitime + (defined($opt->{retry_delay}) ? $opt->{retry_delay} : 60);
+    my $priority    = (defined($opt->{priority}) ? $opt->{priority} : 0);
+
     try {
         my $sth = $self->{dbh}->prepare_cached($self->{failed_query});
-        $sth->execute($retry_delay, $job_id);
+        $sth->execute($retry_delay, $priority, $job_id);
         $sth->finish;
         return $sth->rows;
     } catch {
+    warn 'ababaaaba';
         $self->{_errstr} = "can't update job from job queue database: $_";
         return;
     };

@@ -84,6 +84,24 @@ subtest 'failed job' => sub {
         $sth->execute($job_id);
         ok not $sth->fetchrow_hashref;
     }
+
+    subtest 'failed and set priority' => sub {
+        my $job_id = $client->insert('MyWorker', 'arg');
+        ok $job_id;
+
+        my $job = $client->lookup_job($job_id);
+        is $job->priority, 0;
+        $job->failed({retry_delay => 0});
+
+        $job = $client->lookup_job($job_id);
+        is $job->priority, 0;
+        $job->failed({retry_delay => 0, priority => 1});
+
+        $job = $client->lookup_job($job_id);
+        is $job->priority, 1;
+
+        $job->completed; 
+    };
 };
 
 subtest 'error case' => sub {
