@@ -26,6 +26,7 @@ t/00_compile.t
 t/client.t
 t/job.t
 t/multi_process.t
+t/serialize.t
 t/Utils.pm
 t/worker.t
 xt/02_pod.t
