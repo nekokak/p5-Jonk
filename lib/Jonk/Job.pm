@@ -27,7 +27,7 @@ sub completed {
 sub failed {
     my ($self, $opt) = @_;
 
-    Carp::croak 'job is already complated.' if $self->is_completed;
+    Carp::croak 'job is already completed.' if $self->is_completed;
     Carp::croak 'job is already aborted.'   if $self->is_aborted;
 
     $self->{_failed} = 1;
@@ -39,7 +39,7 @@ sub failed {
 sub aborted {
     my $self = shift;
 
-    Carp::croak 'job is already complated.' if $self->is_completed;
+    Carp::croak 'job is already completed.' if $self->is_completed;
     Carp::croak 'job is already failed.'    if $self->is_failed;
 
     $self->{_aborted} = 1;

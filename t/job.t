@@ -116,9 +116,9 @@ subtest 'error case' => sub {
         $job->completed();
 
         eval {$job->failed};
-        like $@ , qr/job is already complated./;
+        like $@ , qr/job is already completed./;
         eval {$job->aborted};
-        like $@ , qr/job is already complated./;
+        like $@ , qr/job is already completed./;
     }
     {
         my $job_id = $client->insert('MyWorker', 'arg');
