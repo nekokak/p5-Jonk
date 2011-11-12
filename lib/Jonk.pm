@@ -2,7 +2,6 @@ package Jonk;
 use strict;
 use warnings;
 use Jonk::Job;
-use Try::Tiny;
 use Carp ();
 
 our $VERSION = '0.10_02';
@@ -95,7 +94,7 @@ sub insert {
     my ($self, $func, $arg, $opt) = @_;
 
     my $job_id;
-    try {
+    eval {
         $self->{_errstr} = undef;
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
@@ -111,8 +110,9 @@ sub insert {
 
         $job_id = $self->{dbh}->last_insert_id("","",$self->{table_name},"");
         $sth->finish;
-    } catch {
-        $self->{_errstr} = "can't insert for job queue database: $_"
+    };
+    if (my $err = $@) {
+        $self->{_errstr} = "can't insert for job queue database: $err";
     };
 
     $job_id;
@@ -139,7 +139,7 @@ sub _grab_job {
     my ($self, $callback, $opt) = @_;
 
     my $job;
-    try {
+    eval {
         $self->{_errstr} = undef;
         local $self->{dbh}->{RaiseError} = 1;
         local $self->{dbh}->{PrintError} = 0;
@@ -153,8 +153,9 @@ sub _grab_job {
         }
 
         $sth->finish;
-    } catch {
-        $self->{_errstr} = "can't grab job from job queue database: $_";
+    };
+    if (my $err = $@) {
+        $self->{_errstr} = "can't grab job from job queue database: $err";
     };
 
     $job;
@@ -208,13 +209,14 @@ sub find_job {
 sub _delete {
     my ($self, $job_id) = @_;
 
-    try {
+    eval {
         my $sth = $self->{dbh}->prepare_cached($self->{delete_query});
         $sth->execute($job_id);
         $sth->finish;
         return $sth->rows;
-    } catch {
-        $self->{_errstr} = "can't dequeue job from job queue database: $_";
+    };
+    if (my $err = $@){
+        $self->{_errstr} = "can't dequeue job from job queue database: $err";
         return;
     };
 }
@@ -225,14 +227,14 @@ sub _failed {
     my $retry_delay = $self->_server_unixitime + (defined($opt->{retry_delay}) ? $opt->{retry_delay} : 60);
     my $priority    = (defined($opt->{priority}) ? $opt->{priority} : 0);
 
-    try {
+    eval {
         my $sth = $self->{dbh}->prepare_cached($self->{failed_query});
         $sth->execute($retry_delay, $priority, $job_id);
         $sth->finish;
         return $sth->rows;
-    } catch {
-    warn 'ababaaaba';
-        $self->{_errstr} = "can't update job from job queue database: $_";
+    };
+    if (my $err = $@) {
+        $self->{_errstr} = "can't update job from job queue database: $err";
         return;
     };
 }
